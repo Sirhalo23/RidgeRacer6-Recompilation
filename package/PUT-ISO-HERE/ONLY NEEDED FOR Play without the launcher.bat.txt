@@ -1,0 +1,12 @@
+You normally do not need this folder: start "RR6 Launcher.exe", press
+"Choose disc image..." and pick your .iso wherever it is.
+
+This folder is for "Play without the launcher.bat", the fallback for when the
+launcher will not open:
+
+- Copy your own Ridge Racer 6 (USA) Xbox 360 disc image (.iso) into this folder.
+- Exactly one .iso file should be in here. The file name does not matter.
+- Then go back up one folder and double-click "Play without the launcher.bat".
+
+It copies the game files out of the .iso once (about 6 GB, a few minutes).
+After that the .iso is no longer read; you can move it away again.

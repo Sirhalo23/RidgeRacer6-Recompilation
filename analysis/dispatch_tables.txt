@@ -1,0 +1,9 @@
+# sites: 32 {'FUNCPTR': 6, 'switch': 24, 'mixed': 2}
+bctr 8217C400 in sub_8217C3E0 table 8236D130 (.data) entries 5 inside_func 0 func_starts 5 -> FUNCPTR
+bctr 8217C960 in sub_8217C938 table 8236D1E8 (.data) entries 6 inside_func 1 func_starts 6 -> FUNCPTR
+bctr 8217D280 in sub_8217D268 table 8236D1B0 (.data) entries 6 inside_func 0 func_starts 6 -> FUNCPTR
+bctr 8217D2B0 in sub_8217D288 table 8236D1B0 (.data) entries 6 inside_func 2 func_starts 6 -> FUNCPTR
+bctr 8217D2D0 in sub_8217D2B8 table 8236D1E8 (.data) entries 6 inside_func 0 func_starts 6 -> FUNCPTR
+bctr 8217D300 in sub_8217D2D8 table 8236D1E8 (.data) entries 6 inside_func 1 func_starts 6 -> FUNCPTR
+bctr 8229E758 in sub_8229E740 table 82091678 (.rdata) entries 0 inside_func 0 func_starts 0 -> mixed
+bctr 8229FCA0 in sub_8229FC78 table 8208E448 (.rdata) entries 0 inside_func 0 func_starts 0 -> mixed

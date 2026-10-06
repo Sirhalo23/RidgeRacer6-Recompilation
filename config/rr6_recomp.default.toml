@@ -1,0 +1,53 @@
+# Ridge Racer 6 PC - settings (copied next to the exe as rr6_recomp.toml).
+# "RR6 Launcher.exe" edits this file for you; F4 in the game changes settings
+# while playing and F3 shows frame-rate statistics.
+# Options marked [restart] in that menu take effect the next time the game starts.
+# The game runs at its native 60 fps; these settings only change image quality.
+
+# Stops foliage flicker on NVIDIA cards.
+use_fuzzy_alpha_epsilon = true
+
+# Texture sharpness at shallow angles (the road surface stretching into the
+# distance). 3 = 4x (runtime default), 4 = 8x, 5 = 16x.
+anisotropic_override = 5
+
+# ---- 16:9 picture (bars at the sides on an ultrawide monitor) ----
+# Internal render scale. 1 = 1280x720 (what the Xbox 360 drew),
+# 2 = 2560x1440, 3 = 3840x2160. Higher is sharper and costs more GPU.
+resolution_scale = 2
+
+# Other options you can set here:
+# swap_post_effect = "fxaa"         # extra edge smoothing: none, fxaa, fxaa_extreme
+# fullscreen = true                 # false = run in a window
+# vsync = true                      # the game's speed is tied to 60 Hz; leave on
+
+# ---- Keyboard (works alongside a controller) ----
+# "RR6 Launcher.exe" has a Controls tab that edits these. Several keys can be
+# given for one button, separated by commas. Keys do not respond while Shift,
+# Ctrl or Alt is held. Xbox and PlayStation controllers need no settings.
+mnk_mode = true                     # false = ignore the keyboard
+mnk_mouse = false                   # leave the mouse pointer alone
+keybind_lstick_left = "Left,A"      # steer left
+keybind_lstick_right = "Right,D"    # steer right
+keybind_lstick_up = "Up,W"          # menu up
+keybind_lstick_down = "Down,S"      # menu down
+keybind_right_trigger = "Up,W"      # RT / R2: accelerate
+keybind_left_trigger = "Down,S"     # LT / L2: brake
+keybind_a = "Space"                 # A / Cross: confirm
+keybind_b = "Backspace,B"           # B / Circle: cancel
+keybind_x = "X"                     # X / Square
+keybind_y = "Y"                     # Y / Triangle
+keybind_right_shoulder = "E"        # RB / R1
+keybind_left_shoulder = "Q"         # LB / L1
+keybind_start = "Return,P"          # Start / Options: pause
+keybind_back = "Tab"                # Back / Create
+keybind_dpad_up = "Numpad8"
+keybind_dpad_down = "Numpad2"
+keybind_dpad_left = "Numpad4"
+keybind_dpad_right = "Numpad6"
+keybind_rstick_up = "I"
+keybind_rstick_down = "K"
+keybind_rstick_left = "J"
+keybind_rstick_right = "L"
+keybind_lstick_press = "N"          # left stick click / L3
+keybind_rstick_press = "M"          # right stick click / R3

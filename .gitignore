@@ -1,0 +1,22 @@
+# Made from the game: never to be published
+/generated/default/
+/analysis/default.bin
+/game/
+*.iso
+
+# Downloaded separately
+/sdk/
+
+# Build output, packages, logs
+/out/
+/logs/
+/dist/
+*.exe
+*.dll
+*.map
+*.res
+*.o
+*.obj
+bug-report.zip
+launcher-art.*
+__pycache__/

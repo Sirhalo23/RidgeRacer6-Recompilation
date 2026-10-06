@@ -1,0 +1,33 @@
+pl_mpeg - MPEG-1 video decoder, MP2 audio decoder, MPEG-PS demuxer
+by Dominic Szablewski (https://phoboslab.org)
+https://github.com/phoboslab/pl_mpeg
+
+The launcher (RR6 Launcher.exe) contains a copy of pl_mpeg with two small
+changes, described at the top of launcher\pl_mpeg_sofdec.h in the source. It
+is used to read still pictures from the opening movie of the player's own copy
+of the game.
+
+pl_mpeg is released under the MIT licence (its source file carries
+"SPDX-License-Identifier: MIT"). The text of that licence:
+
+MIT License
+
+Copyright (c) Dominic Szablewski
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
