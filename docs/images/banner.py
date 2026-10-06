@@ -1,10 +1,14 @@
-# Draws the repository's banner and social preview: an original graphic in the
-# colours of the project's launcher (charcoal, honeycomb, lime bands). No game
-# artwork is used.
+# Draws the plain version of the repository's banner, and the social preview:
+# an original graphic in the colours of the project's launcher (charcoal,
+# honeycomb, lime bands). No game artwork is used here.
+#
+# banner.png, the picture at the top of the README, is not written by this
+# script: it is this drawing with a car added by the repository owner in an AI
+# image generator (the file carries a C2PA record that says so).
 #
 # Needs Pillow, the Inter typeface installed, and Michroma-Regular.ttf (SIL Open
 # Font License, https://github.com/googlefonts/Michroma-font) next to this file.
-# Writes banner.png and social-preview.png into the current folder.
+# Writes banner-plain.png and social-preview.png into the current folder.
 import math, sys
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
@@ -91,5 +95,5 @@ def draw(width, height, title_px, sub_px, out, taglines, lit_from):
         y += line_step
     img.convert('RGB').resize((width, height), Image.LANCZOS).save(out, optimize=True)
 
-draw(1280, 400, 58, 21, 'banner.png', ['Unofficial native Windows version. Bring your own disc image.'], 0.50)
+draw(1280, 400, 58, 21, 'banner-plain.png', ['Unofficial native Windows version. Bring your own disc image.'], 0.50)
 draw(1280, 640, 76, 26, 'social-preview.png', ['Unofficial native Windows version.', 'Bring your own disc image.'], 0.62)
