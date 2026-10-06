@@ -18,6 +18,7 @@ set(RR6RECOMP_SOURCES
     src/fp_guard.cpp
     src/save_fixes.cpp
     src/input_fixes.cpp
+    src/quit_prompt.cpp
     src/widescreen.cpp
     src/depth_bias_fix.cpp
 )

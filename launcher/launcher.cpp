@@ -1764,7 +1764,7 @@ void BuildUi() {
   AddNote(pg,
           L"The game always runs at 60 frames per second, as it did on Xbox 360.\n"
           L"If the game runs slowly, choose a lower Sharpness.\n"
-          L"While playing: F4 opens more settings, F3 shows frame-rate statistics, Alt+F4 closes the game.",
+          L"While playing: Esc quits (on a controller, hold Back + Start). F4 opens more settings, F3 shows statistics.",
           lx, y, full, 54);
 
   // ---- Controls page ----

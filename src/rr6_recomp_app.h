@@ -6,6 +6,8 @@
 
 #include <rex/rex_app.h>
 
+#include "quit_prompt.h"
+
 class Rr6RecompApp : public rex::ReXApp {
  public:
   using rex::ReXApp::ReXApp;
@@ -16,16 +18,20 @@ class Rr6RecompApp : public rex::ReXApp {
         PPCImageConfig));
   }
 
+  // The "Quit Ridge Racer 6?" question (Esc, or Back + Start held).
+  void OnCreateDialogs(rex::ui::ImGuiDrawer* drawer) override {
+    rr6::InstallQuitPrompt(drawer, window(), &app_context());
+  }
+  void OnShutdown() override { rr6::RemoveQuitPrompt(); }
+
   // Override virtual hooks for customization:
   // void OnPostInitLogging() override {}
   // void OnPreSetup(rex::RuntimeConfig& config) override {}
   // void OnLoadXexImage(std::string& xex_image) override {}
   // void OnPostLoadXexImage() override {}
   // void OnPostSetup() override {}
-  // void OnCreateDialogs(rex::ui::ImGuiDrawer* drawer) override {}
   // std::unique_ptr<rex::ui::ImGuiDialog> CreateAchievementsOverlay() override;
   // std::unique_ptr<rex::ui::AchievementNotificationDialog>
   // CreateAchievementNotificationDialog() override;
-  // void OnShutdown() override {}
   // void OnConfigurePaths(rex::PathConfig& paths) override {}
 };

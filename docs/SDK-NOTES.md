@@ -116,3 +116,10 @@ finds them by scanning data and `lis/addi` pairs for addresses that land on a
   processor cores" on every affinity call when the host has fewer than six.
 - The SDK audio worker thread busy-waits: it used 40-90% of one core in every
   Linux test run.
+- A key binding made with `rex::ui::RegisterBind` appears to fire again for
+  every repeat of a held key: a binding that toggled a window flipped it back
+  while the key was held. `KeyEvent::prev_state()` marks the repeats correctly
+  (seen in the log), so the bind dispatcher could skip them.
+- With the SDK's F3 window open, the game received no keyboard-as-controller
+  input; with only an app's own `ImGuiDialog` open it did. Seen on Linux, not
+  tried with a real pad or with the F4 window. Not documented either way.

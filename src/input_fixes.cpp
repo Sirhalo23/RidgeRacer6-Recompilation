@@ -1,4 +1,5 @@
-// Input diagnostics.
+// Controller input as the game reads it: the quit question (quit_prompt.cpp)
+// and a diagnostic.
 //
 // rr6_log_input = true writes a line to the log every time the controller
 // state the game reads for player 1 changes (buttons, triggers, left stick).
@@ -13,6 +14,7 @@
 
 #include <atomic>
 #include <cstdint>
+#include <cstring>
 
 #include <rex/cvar.h>
 #include <rex/hook.h>
@@ -20,6 +22,7 @@
 #include <rex/ppc/context.h>
 
 #include "generated/default/rr6_recomp_init.h"
+#include "quit_prompt.h"
 
 REXCVAR_DEFINE_BOOL(rr6_log_input, false, "RR6",
                     "Diagnostic: log every change of the controller state the game reads for "
@@ -31,6 +34,11 @@ REX_HOOK_RAW(sub_8224C9C0) {
   const uint32_t user = ctx.r3.u32;
   const uint32_t state = ctx.r4.u32;
   __imp__sub_8224C9C0(ctx, base);
+  // While the quit question is on screen the game gets an idle controller:
+  // no buttons, triggers released, sticks centred.
+  if (state && ctx.r3.u32 == 0 && rr6::QuitPromptSeesPad(user, REX_LOAD_U16(state + 4))) {
+    std::memset(base + state + 4, 0, 12);
+  }
   if (!REXCVAR_GET(rr6_log_input) || user != 0 || !state) {
     return;
   }

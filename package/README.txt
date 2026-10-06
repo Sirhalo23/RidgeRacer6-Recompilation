@@ -60,8 +60,13 @@ The launcher's Display tab:
 - Edge smoothing, Texture detail: optional image-quality extras.
 
 The game always runs at 60 frames per second, as it did on Xbox 360.
-While playing: F4 opens more settings, F3 shows frame-rate statistics,
-Alt+F4 closes the game. The launcher stores its choices in bin\rr6_recomp.toml.
+While playing: F4 opens more settings, F3 shows frame-rate statistics.
+The launcher stores its choices in bin\rr6_recomp.toml.
+
+To leave the game, press Esc: it asks "Quit Ridge Racer 6?". Enter quits,
+Esc again goes back to the game. On a controller, hold Back + Start for a
+second (Create/Share + Options on a PlayStation pad), then A quits and B goes
+back. Alt+F4 still closes the game at once.
 
 
 CONTROLS

@@ -44,6 +44,7 @@ Racer and its trademarks.
 - **Controllers:** Xbox and PlayStation pads through SDL, with no setup.
 - **Keyboard:** works alongside a controller; every key can be changed.
 - **Saving** to `Documents\rr6_recomp`.
+- **Quitting** from the keyboard or the controller, with a question first.
 - **Bug reports:** the launcher can record a detailed log and pack it, with
   your PC's specifications and without your Windows user name, into one zip.
 
@@ -75,8 +76,10 @@ names.
 | Numpad 8 2 4 6 | D-pad |
 | I K J L | Right stick |
 
-While playing: F4 opens the settings, F3 shows frame-rate statistics, Alt+F4
-closes the game.
+While playing: F4 opens the settings and F3 shows frame-rate statistics.
+
+To leave the game, press Esc, or hold Back + Start on a controller for a
+second. The game asks whether to quit: Enter or A quits, Esc or B goes back.
 
 ## Known limitations
 

@@ -1,5 +1,13 @@
 # Release notes
 
+## Not yet released
+
+In the source, not yet in a release zip:
+
+- Esc, or Back + Start held for a second on a controller, asks "Quit Ridge
+  Racer 6?" (Enter or A quits, Esc or B goes back). Until now the only way out
+  was Alt+F4.
+
 ## v0.1.0 (2026-10-06)
 
 First test release. Inside the zip it calls itself "test build 04".

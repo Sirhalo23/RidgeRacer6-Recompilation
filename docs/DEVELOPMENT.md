@@ -147,6 +147,20 @@ Shift, Ctrl or Alt is held. Steering is digital (full lock or nothing).
 `rr6_log_input = true` (`src/input_fixes.cpp`) logs every change of the pad
 state the game reads, for "my controller does nothing" reports.
 
+**Leaving the game** (`src/quit_prompt.cpp`). The game has no way out of its
+own, and a full-screen window has no close button, so the only way used to be
+Alt+F4. Now Esc, or Back + Start held for a second on a controller, asks "Quit
+Ridge Racer 6?" in the SDK's overlay: Enter or A quits, Esc or B goes back, and
+the two buttons can be clicked. Quitting asks the window to close, which is
+what Alt+F4 does. The game keeps running behind the question; it is given an
+idle controller while the question is up and until the answering button is let
+go, and a question left unanswered for half a minute goes away. Back + Start
+reaches the game before the question appears, so in a race the game's own
+pause menu is up behind it. `rr6_quit_prompt = false` turns it off;
+`rr6_quit_key` names the key. Checked on the Linux rig with the keyboard
+standing in for the pad (tap, long hold with key repeat, Back + Start hold,
+both answers, mouse, clean exit); not yet tried on Windows or with a real pad.
+
 ## Display settings
 
 The game stays at its native 60 fps (its speed is tied to the display tick).
@@ -255,7 +269,8 @@ Still to confirm on Windows: progress survives a restart; saving after a race.
   exceptions there (crash 2: float inexact result in the audio mixer).
 - `fp_guard.cpp`: safety net for the same problem elsewhere; logs to
   `logs\fp-guard.txt`.
-- `save_fixes.cpp`, `widescreen.cpp`, `input_fixes.cpp`: see above.
+- `save_fixes.cpp`, `widescreen.cpp`, `input_fixes.cpp`, `quit_prompt.cpp`: see
+  above.
 - `depth_bias_fix.cpp`: rounds the slope-scaled depth bias so that Direct3D 12
   does not build a new pipeline for every draw (see "Known issues").
 
