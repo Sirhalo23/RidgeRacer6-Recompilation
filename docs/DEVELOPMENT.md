@@ -332,6 +332,8 @@ the rig says nothing about D3D12-specific behaviour such as the pipeline cache.
     RR6 Launcher.exe           the launcher (prebuilt)
     gamecontrollerdb.txt       SDL community controller mappings
     package/                   static files of the tester package + make-package.ps1
+    linux/                     Linux start script, READMEs, bug-report and packaging scripts
+    build-linux.sh             Linux build (game binary and launcher/rr6-extract)
     make-tester-package.bat    builds ..\dist\RidgeRacer6-PC-TestBuild-NN.zip
     SDK-NOTES.md               findings to report to the SDK
     analysis/                  import list, pointer-target report, unpacked image
@@ -396,6 +398,83 @@ Builds so far (all in `..\dist`, each with its private `.map`):
   has a short safety note. The script change was checked with PowerShell 7 on
   Linux, not on Windows.
 
+## Linux and Steam Deck packages (`linux/`, `build-linux.sh`)
+
+Made on request after the first release; first packages on 2026-10-06 as
+`..\dist\RidgeRacer6-Linux-TestBuild-01.tar.gz` and
+`RidgeRacer6-SteamDeck-TestBuild-01.tar.gz`. **Not run on real graphics
+hardware or on a Steam Deck by anyone yet.**
+
+**The program.** The same sources, built by `build-linux.sh` (Clang 18, CMake,
+Ninja) against the SDK's Linux package. On Linux the SDK is two shared
+libraries, `librexruntime.so` and the graphics plugin `librexgpu-xenos.so`
+(Vulkan), which go into the package next to `rr6_recomp`. What the three need
+on the machine, as read from the binaries: glibc 2.35, `GLIBCXX_3.4.32` (the
+C++ library of GCC 13.2; this comes from the SDK's prebuilt libraries and is
+what rules out Ubuntu 22.04 and Debian 12), libX11, libX11-xcb, libxcb,
+libwayland-client, and a processor with SSE4.1. Vulkan and the sound system
+are loaded at run time. Save data and the shader cache go to
+`~/.local/share/rr6_recomp`.
+
+**The disc-image tool.** `launcher/rr6_extract.cpp` is a command-line face for
+`disc_image.cpp`, the code the Windows launcher copies the game files with:
+same version check, same markers in the game folder, progress as text. Linked
+statically. Run on the real disc image on Ubuntu 22.04: 45 files, identical to
+the copy the Windows side made.
+
+**The start script.** `linux/ridge-racer-6.sh` stands in for the launcher:
+
+- checks the processor and, with `ldd`, that the system's libraries are new
+  enough, and says which are not;
+- first start: takes the disc image from `--iso`, from an `.iso` put into the
+  package folder, from a file-chooser window (kdialog or zenity), or from a
+  path typed into the terminal, and runs the disc-image tool. Started from a
+  file manager it opens itself in a terminal window for this;
+- first start: writes `bin/rr6_recomp.toml` with the Windows launcher's
+  "Automatic" rules (render size from the screen height, a wide screen filled),
+  the screen size taken from `xrandr` or `xdpyinfo`. On a Steam Deck (the
+  package's `steam-deck` marker file, or the machine's name Jupiter / Galileo)
+  it writes 1280x720 with bars instead;
+- starts the game through X11 (`SDL_VIDEO_DRIVER=x11`; `--wayland` leaves the
+  choice to SDL, untested), and without Steam's library folders if the library
+  check only passes without them;
+- watches the log while the game runs. On Linux a fault in the game's own code
+  does not end the program: the SDK logs "Unhandled guest access violation"
+  and the same fault repeats without end, at full processor load, with a
+  frozen picture, and the log (5 MB files, ten kept) loses the cause within a
+  minute. Seen with the stand-in disc image below. The script keeps the 400
+  lines up to the first fault in `logs/fault.txt` and stops the game.
+
+`linux/collect-report.sh` packs logs, settings and a description of the system
+into `bug-report.tar.gz`, with the user name, home folder and host name
+replaced. `linux/make-package.sh <n>` builds both archives and keeps the
+unstripped binary next to them as the private symbols file.
+
+**The two packages** hold the same files except for the README and the
+`steam-deck` marker. Layout: `ridge-racer-6.sh`, `README.txt`, `BUILD.txt`,
+`bin/` (program, the two libraries, `rr6-extract`, `gamecontrollerdb.txt`, the
+settings once written), `tools/collect-report.sh`, `licenses/`; `game/` and
+`logs/` appear on the first start.
+
+**Checked** (all on the software-rendering rig unless said otherwise):
+
+- first start from a "file manager" (no terminal): terminal window opens, the
+  file chooser picks the image, copy, settings, game starts;
+- first start in a terminal with the image in the package folder (a name with
+  spaces), Steam Deck package: Deck settings written;
+- these two used a stand-in image: the real disc's layout and real
+  `default.xex`, every other file empty. The game then faults, which is how
+  the endless-fault behaviour and the watchdog were seen;
+- with the real game files: start from both packages, the quit question by
+  keyboard and by the Back + Start hold, exit status 0, windowed start;
+- the bug report's contents; the "system too old" message on a real Ubuntu
+  22.04; `build-linux.sh` and `make-package.sh` from a fresh copy of the
+  repository (recompile, build, package).
+
+**Not checked:** any real graphics card or driver, a Steam Deck, Steam's Game
+Mode and "Add to Steam", a Wayland desktop, real sound output, controllers on
+Linux, KDE's kdialog chooser, terminal programs other than xterm.
+
 ## Publishing the source
 
 `python tools/export_source.py <folder>` copies the publishable part of the
@@ -415,3 +494,7 @@ any executable.
 2. The rest of the checklist: save and reload, keyboard, PlayStation pad.
 3. Wider play-testing: all tracks, videos, long sessions, other GPUs.
 4. Report the SDK findings upstream (`SDK-NOTES.md`).
+5. Build the quit question on Windows and try it there (branch `quit-prompt`).
+6. Get the Linux packages run on real hardware: a desktop with a graphics card
+   and a Steam Deck. First things to learn: does it start, at what speed, and
+   does anything look wrong under a real Vulkan driver.

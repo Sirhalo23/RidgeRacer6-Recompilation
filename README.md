@@ -32,6 +32,29 @@ Racer and its trademarks.
 
 `README.txt` in the zip has the details, including how to report a problem.
 
+## Linux and Steam Deck (experimental)
+
+There are test builds for desktop Linux and for the Steam Deck, as
+`RidgeRacer6-Linux-TestBuild-<n>.tar.gz` and
+`RidgeRacer6-SteamDeck-TestBuild-<n>.tar.gz` under [Releases](../../releases)
+(marked as pre-releases). They hold the same program, drawn with Vulkan; the
+Steam Deck one comes with settings and instructions for the Deck.
+
+They have been run from start to finish only on a machine without a graphics
+card, with software rendering. Nobody has played them at full speed yet, so
+expect problems, and please report what you find.
+
+1. Unpack the archive in your home folder.
+2. Start `ridge-racer-6.sh`. The first time, it asks for your Ridge Racer 6
+   `.iso` (or uses one you put into the folder), checks it, and copies the game
+   files out of it.
+3. The game starts. Settings are in `bin/rr6_recomp.toml`, written for your
+   screen on the first start; F4 in the game changes them.
+
+Needs a 64-bit system from 2024 or later (glibc 2.35 and the C++ library of
+GCC 13.2: Ubuntu 24.04, Debian 13, Fedora 39, SteamOS 3.6, Arch) and a Vulkan
+driver. `README.txt` in each archive has the details.
+
 ## Features
 
 - **Launcher** with display settings, key bindings and the disc-image copy.
@@ -93,14 +116,14 @@ second. The game asks whether to quit: Enter or A quits, Esc or B goes back.
 - Keyboard steering is all-or-nothing; a controller is the better way to play.
 - Without a sound output device the game closes right after starting (the
   launcher warns about this).
-- Windows only for now. The same sources build on Linux, but that build has
-  only been used for testing.
+- The Linux and Steam Deck builds have not been run on real graphics hardware
+  yet, and have no settings window: settings are a text file.
 
 ## Building it yourself
 
 See [BUILDING.md](BUILDING.md). In short: your own `default.xex`, the ReXGlue
 SDK v0.10.0, Visual Studio's C++ build tools and Clang, then
-`build-windows.bat`.
+`build-windows.bat`; on Linux, Clang, CMake and Ninja, then `build-linux.sh`.
 
 ## Reporting problems
 

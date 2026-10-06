@@ -1,0 +1,126 @@
+RIDGE RACER 6 - LINUX TEST BUILD @BUILD@
+=========================================
+
+An unofficial native Linux version of Ridge Racer 6 (Xbox 360, USA disc),
+made by recompiling the game's program. It contains no game data: you need
+your own Ridge Racer 6 (USA) disc image (.iso).
+
+This is the first Linux build, and it is experimental. It has been run from
+start to finish only on a test machine without a graphics card (very slowly,
+with software rendering). Nobody has yet played it at full speed on Linux:
+you may be the first. Please report what you see (see REPORTING A PROBLEM).
+
+
+WHAT YOU NEED
+-------------
+- A 64-bit Intel or AMD PC (the processor must have SSE4.1: anything since
+  about 2011).
+- A Linux system from 2024 or later: Ubuntu 24.04, Debian 13, Fedora 39,
+  SteamOS 3.6, or newer; or a rolling system such as Arch or openSUSE
+  Tumbleweed. (Technically: glibc 2.35 and the C++ library of GCC 13.2.
+  The start script tells you if your system is too old.)
+- A graphics card with a Vulkan driver, and the Vulkan loader installed
+  (package "vulkan-loader" or "libvulkan1"; normally already there).
+- Sound through PipeWire, PulseAudio or ALSA.
+- About 6.5 GB of free disk space.
+- Your Ridge Racer 6 (USA) disc image. Other regions do not work.
+
+Steam Deck: there is a separate package for it, with its own README.
+
+
+HOW TO START
+------------
+1. Unpack this archive somewhere in your home folder.
+2. Start "ridge-racer-6.sh": double-click it and choose "Run" (or "Execute"),
+   or open a terminal in this folder and type  ./ridge-racer-6.sh
+   (If a double-click opens the file in a text editor instead, right-click it
+   and choose "Run as a Program", or use the terminal.)
+3. The first time, a terminal window asks for your disc image. Choose the
+   .iso file. The game files are copied out of it into the "game" folder
+   here (about 6 GB, a few minutes), after a check that it is the right
+   version. The disc image itself is not changed and is not needed again.
+   Shortcut: put the .iso into this folder first and it is used without
+   asking; or pass it on the command line:  ./ridge-racer-6.sh --iso FILE
+4. The game starts. From then on the script starts the game straight away.
+
+To leave the game: press Esc, then Enter. On a controller: hold Back + Start
+for a second, then press A. (Esc again, or B, goes back to the game.)
+
+
+SETTINGS
+--------
+There is no settings window on Linux yet. On the first start the script
+writes bin/rr6_recomp.toml with settings chosen for your screen:
+
+- full screen;
+- the game drawn at the next multiple of 1280x720 above your screen's size
+  (2560x1440 for a 1080p or 1440p screen, 3840x2160 for 4K);
+- a screen wider than 16:9 (ultrawide) is filled, with the race display moved
+  to the screen edges.
+
+To change them, edit bin/rr6_recomp.toml with a text editor (every line is
+explained there), or press F4 in the game. F3 shows frame-rate statistics.
+If the game runs slowly, lower draw_resolution_scale_x and _y.
+To have the file written afresh:  ./ridge-racer-6.sh --new-settings
+
+The game always runs at 60 frames per second, as it did on Xbox 360.
+
+Other options of the start script:  ./ridge-racer-6.sh --help
+
+
+CONTROLS
+--------
+Controllers: Xbox and PlayStation controllers work as soon as they are
+plugged in or paired. The game shows Xbox button names. On a PlayStation pad:
+Cross = A, Circle = B, Square = X, Triangle = Y, L1/R1 = LB/RB,
+L2/R2 = LT/RT, Options = Start, Create/Share = Back.
+
+Keyboard (works together with a controller):
+  Arrow keys or W A S D   steer, move in menus
+  Up or W                 accelerate        Down or S   brake
+  Space                   A (confirm)       Backspace or B   B (cancel)
+  X, Y                    X, Y              Q, E   LB, RB
+  Enter or P              Start (pause)     Tab    Back
+The keys are listed in bin/rr6_recomp.toml and can be changed there.
+
+
+WHERE THINGS ARE KEPT
+---------------------
+  this folder/game/        the game files copied from your disc image
+  this folder/bin/         the program and its settings (rr6_recomp.toml)
+  this folder/logs/        the log of the last run
+  ~/.local/share/rr6_recomp/   your save data, and the graphics cache
+
+To remove everything, delete this folder and ~/.local/share/rr6_recomp.
+
+
+KNOWN LIMITATIONS
+-----------------
+- Untested on real graphics hardware (see the top of this file).
+- The game runs through X11 (XWayland on a Wayland desktop). To let it try
+  Wayland directly:  ./ridge-racer-6.sh --wayland
+- Online play does not work. Leave "Online Battle" alone.
+- On ultrawide screens the videos and the loading screen are stretched.
+- The first minutes of play can stutter while graphics shaders are built;
+  they are kept for the next start.
+
+
+REPORTING A PROBLEM
+-------------------
+Run  tools/collect-report.sh  in this folder. It packs the game's log, your
+settings and a description of your system (distribution, processor, graphics
+card, driver) into bug-report.tar.gz, with your user name and computer name
+removed. Send that file with a few words on what happened and where.
+For a crash, start the game once more with  ./ridge-racer-6.sh --diagnostic
+and make it happen again before collecting the report.
+
+Project page: https://github.com/Sirhalo23/RidgeRacer6-Recompilation
+
+
+LEGAL
+-----
+Ridge Racer 6 is the property of Bandai Namco Entertainment. This build is
+not made, endorsed or supported by them. It contains no game data, artwork or
+sound; the program in bin/ is the game's own program in recompiled form and
+is of no use without the game files from your own disc.
+Licences of the software this build is made with are in the "licenses" folder.

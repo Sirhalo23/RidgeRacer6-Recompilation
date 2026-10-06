@@ -116,6 +116,12 @@ finds them by scanning data and `lis/addi` pairs for addresses that land on a
   processor cores" on every affinity call when the host has fewer than six.
 - The SDK audio worker thread busy-waits: it used 40-90% of one core in every
   Linux test run.
+- On Linux an unhandled guest access violation does not end the process. The
+  handler logs "Unhandled guest access violation" and returns, the faulting
+  instruction runs again, and this repeats without end (about 1,000 log lines a
+  second at full processor load; the rotating log loses the first fault within
+  a minute). Seen with game data files that were all zeros. Ending the process
+  after the first report, as happens on Windows, would keep the evidence.
 - A key binding made with `rex::ui::RegisterBind` appears to fire again for
   every repeat of a held key: a binding that toggled a window flipped it back
   while the key was held. `KeyEvent::prev_state()` marks the repeats correctly

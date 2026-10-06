@@ -28,13 +28,14 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # (source folder, destination folder, patterns, recurse into subfolders)
 INCLUDE = [
     ('rr6-recomp', '', ['CMakeLists.txt', 'CMakePresets.json', 'rr6_recomp_manifest.toml',
-                        'gamecontrollerdb.txt', '*.bat'], False),
+                        'gamecontrollerdb.txt', '*.bat', '*.sh'], False),
     ('rr6-recomp/generated', 'generated', ['rexglue.cmake'], False),
     ('rr6-recomp/src', 'src', ['*.cpp', '*.h'], True),
     ('rr6-recomp/config', 'config', ['*.toml'], True),
     ('rr6-recomp/launcher', 'launcher', ['*.cpp', '*.c', '*.h', '*.rc', '*.manifest', '*.ico', '*.sh',
                                          '*.txt'], True),
     ('rr6-recomp/package', 'package', ['*'], True),
+    ('rr6-recomp/linux', 'linux', ['*.sh', '*.txt'], True),
     ('rr6-recomp/analysis', 'analysis', ['*.txt'], False),
     ('rr6-recomp/publish', '', ['*.md', 'LICENSE'], False),
     ('rr6-recomp/publish/images', 'docs/images', ['*.png', '*.py'], False),

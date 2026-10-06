@@ -81,6 +81,29 @@ report can be turned into a function name
 
 ## Linux
 
-The same sources build against the SDK's Linux package (Vulkan) with the
-`linux-*` presets in `CMakePresets.json`. That build has only been used for
-automated checks with software rendering; see `tools/linux-rig/README.md`.
+The same sources build against the SDK's Linux package (Vulkan).
+
+You need Clang 18 or newer, CMake 3.25 or newer, Ninja and g++, the SDK's
+Linux package unpacked into `../sdk/linux-amd64` (or anywhere, with `REXSDK`
+pointing at it), and the game files in `../game`:
+
+    python3 tools/extract_xiso.py /path/to/your.iso extract ../game
+    ./build-linux.sh
+
+The first build runs the SDK's recompiler and then compiles its output; later
+builds only redo what changed. The result is `out/build/linux-release/rr6_recomp`
+and `launcher/rr6-extract`, the command-line disc-image tool.
+
+`linux/make-package.sh <number>` assembles the two archives for other people
+(`RidgeRacer6-Linux-TestBuild-NN.tar.gz` and `RidgeRacer6-SteamDeck-TestBuild-NN.tar.gz`)
+in `../dist`: the game binary, the SDK's two runtime libraries, the disc-image
+tool, the start script `linux/ridge-racer-6.sh`, a README and the licences.
+Next to them it puts the game binary with its symbols, which stays private
+like the Windows linker map.
+
+A binary built this way needs, on the machine that runs it, at least the glibc
+and C++ library versions of the SDK's own libraries (glibc 2.35, GCC 13.2) or
+of the machine it was built on, whichever is newer.
+
+`tools/linux-rig/README.md` describes how the game is run without a graphics
+card for automated checks.
