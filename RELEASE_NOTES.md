@@ -1,12 +1,12 @@
 # Release notes
 
-## Not yet released
+## v0.1.1 (2026-10-06)
 
-In the source, not yet in a release zip:
+Inside the zip it calls itself "test build 05".
 
 - Esc, or Back + Start held for a second on a controller, asks "Quit Ridge
   Racer 6?" (Enter or A quits, Esc or B goes back). Until now the only way out
-  was Alt+F4.
+  was Alt+F4, which still works.
 
 ## Linux test build 01 (2026-10-06)
 
@@ -15,7 +15,7 @@ archives, the second with the Deck's settings and instructions.
 
 - Start script that copies the game files out of your own disc image on the
   first start, chooses settings for the screen, and starts the game.
-- The quit question described above is in these builds.
+- The quit question of v0.1.1 is in these builds.
 - A script that packs logs and a description of the system for a bug report.
 
 Experimental: run only with software rendering so far, on no real graphics

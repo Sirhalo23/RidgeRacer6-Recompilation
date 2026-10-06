@@ -159,7 +159,9 @@ reaches the game before the question appears, so in a race the game's own
 pause menu is up behind it. `rr6_quit_prompt = false` turns it off;
 `rr6_quit_key` names the key. Checked on the Linux rig with the keyboard
 standing in for the pad (tap, long hold with key repeat, Back + Start hold,
-both answers, mouse, clean exit); not yet tried on Windows or with a real pad.
+both answers, mouse, clean exit). Built on Windows on 2026-10-06 (17:18) and
+tried there the same day: Esc brought the question up and quit the game, and
+so did the Back + Start hold on an Xbox controller.
 
 ## Display settings
 
@@ -397,6 +399,11 @@ Builds so far (all in `..\dist`, each with its private `.map`):
   `bug-report.zip`, so a report can be attached to a public issue; the README
   has a short safety note. The script change was checked with PowerShell 7 on
   Linux, not on Windows.
+- 05: game executable built 2026-10-06 17:18 with the quit question
+  (`src/quit_prompt.cpp`), played on Windows from the build folder (see
+  "Controls"). The launcher differs from 04's in one line of text (Esc instead
+  of Alt+F4); it was looked at under Wine, and this zip itself has not been
+  run on Windows. Published name: `RidgeRacer6-PC-v0.1.1.zip`.
 
 ## Linux and Steam Deck packages (`linux/`, `build-linux.sh`)
 
@@ -494,7 +501,6 @@ any executable.
 2. The rest of the checklist: save and reload, keyboard, PlayStation pad.
 3. Wider play-testing: all tracks, videos, long sessions, other GPUs.
 4. Report the SDK findings upstream (`SDK-NOTES.md`).
-5. Build the quit question on Windows and try it there (branch `quit-prompt`).
-6. Get the Linux packages run on real hardware: a desktop with a graphics card
+5. Get the Linux packages run on real hardware: a desktop with a graphics card
    and a Steam Deck. First things to learn: does it start, at what speed, and
    does anything look wrong under a real Vulkan driver.
