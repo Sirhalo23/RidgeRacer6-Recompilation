@@ -1,3 +1,5 @@
+![Ridge Racer 6 Recomp: unofficial native Windows version](docs/images/banner.png)
+
 # Ridge Racer 6 Recomp
 
 An unofficial, fan-made native Windows version of **Ridge Racer 6** (Xbox 360,

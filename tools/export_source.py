@@ -37,6 +37,7 @@ INCLUDE = [
     ('rr6-recomp/package', 'package', ['*'], True),
     ('rr6-recomp/analysis', 'analysis', ['*.txt'], False),
     ('rr6-recomp/publish', '', ['*.md', 'LICENSE'], False),
+    ('rr6-recomp/publish/images', 'docs/images', ['*.png', '*.py'], False),
     ('tools', 'tools', ['*.py'], False),
     ('tools/linux-rig', 'tools/linux-rig', ['*'], True),
 ]
