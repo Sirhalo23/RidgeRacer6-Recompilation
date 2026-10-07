@@ -1,5 +1,10 @@
 # Release notes
 
+Windows and Edge warn about every release zip, because the programs are not
+code-signed and a new file has no download history. The README says what to
+do: [If Windows warns about the download](README.md#if-windows-warns-about-the-download).
+Each release page has the zip's SHA-256 in `SHA256SUMS.txt`.
+
 ## Not yet released
 
 In the source, not yet in a Windows release zip (in Linux test builds 02 and
