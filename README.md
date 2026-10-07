@@ -51,7 +51,7 @@ not ask for administrator rights.
 To check that the file is the one published here, compare its SHA-256 with
 `SHA256SUMS.txt` on the release page. In PowerShell, with the file's name:
 
-    Get-FileHash .\RidgeRacer6-PC-v0.1.0.zip
+    Get-FileHash .\RidgeRacer6-PC-v0.1.2.zip
 
 If your antivirus names a specific threat instead of giving one of the
 warnings above, please [open an issue](../../issues) with its exact wording.
