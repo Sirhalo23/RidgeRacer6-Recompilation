@@ -33,7 +33,9 @@ You can press Stop while the files are being copied; choosing the .iso again
 later carries on from where it stopped.
 
 If Windows shows "Windows protected your PC", choose More info > Run anyway.
-The build is not code-signed. If the launcher will not open at all, copy your
+The build is not code-signed. (To avoid being asked for each program, unblock
+the zip before extracting it: right-click the zip, Properties, tick "Unblock",
+OK.) If the launcher will not open at all, copy your
 .iso into the PUT-ISO-HERE folder and use "Play without the launcher.bat"
 instead.
 

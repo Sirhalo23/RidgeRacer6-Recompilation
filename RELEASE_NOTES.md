@@ -1,5 +1,10 @@
 # Release notes
 
+Windows and Edge warn about every release zip, because the programs are not
+code-signed and a new file has no download history. The README says what to
+do: [If Windows warns about the download](README.md#if-windows-warns-about-the-download).
+Each release page has the zip's SHA-256 in `SHA256SUMS.txt`.
+
 ## v0.1.0 (2026-10-06)
 
 First test release. Inside the zip it calls itself "test build 04".
