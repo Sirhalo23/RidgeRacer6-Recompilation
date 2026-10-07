@@ -14,6 +14,10 @@ drawing (`docs/images/banner.py`), set in
 in `banner.png` is fan art made by the repository owner with an AI image
 generator; it is not a file from the game.
 
+`assets/achievement.wav`, the sound played with an achievement pop-up, is an
+original chime made by `tools/make_chime.py`. It is not a recording of any
+console's sound.
+
 The BSD 3-Clause licence in `LICENSE` covers this project's own files only.
 
 Ridge Racer 6 itself is the property of Bandai Namco Entertainment. No file

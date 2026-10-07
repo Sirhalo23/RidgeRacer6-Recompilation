@@ -61,8 +61,13 @@ The launcher's Display tab:
 - Edge smoothing, Texture detail: optional image-quality extras.
 
 The game always runs at 60 frames per second, as it did on Xbox 360.
-While playing: F4 opens more settings, F3 shows frame-rate statistics,
-Alt+F4 closes the game. The launcher stores its choices in bin\rr6_recomp.toml.
+While playing: F4 opens more settings, F3 shows frame-rate statistics.
+The launcher stores its choices in bin\rr6_recomp.toml.
+
+To leave the game, press Esc: it asks "Quit Ridge Racer 6?". Enter quits,
+Esc again goes back to the game. On a controller, hold Back + Start for a
+second (Create/Share + Options on a PlayStation pad), then A quits and B goes
+back. Alt+F4 still closes the game at once.
 
 
 CONTROLS
@@ -88,6 +93,24 @@ The keyboard is on/off: steering is all-or-nothing, so a controller is the
 better way to play.
 
 
+ACHIEVEMENTS
+------------
+The game's 36 achievements work as they did on the Xbox 360: when you earn
+one, a pop-up appears with a sound, and it is remembered.
+
+- The list while playing: press F7. Or press Esc and then Y; on a controller,
+  hold Back + Start for a second and then press Y. The arrow keys, the D-pad
+  or the stick scroll it; Esc or B closes it.
+- The list without starting the game: the launcher's Achievements page.
+- 15 of the 36 need Xbox Live play, which this version does not have. The
+  lists show them apart, and count your progress against the 21 you can earn
+  (565 of the 1000 gamerscore).
+- Your own sound: put a file named achievement.wav next to RR6 Launcher.exe
+  and the game plays it instead of its own chime. The launcher's Achievements
+  page has a button to hear it.
+- Progress is kept with your save data (Documents\rr6_recomp).
+
+
 WHAT TO TEST
 ------------
 This build has only been played for short sessions on ONE PC (NVIDIA
@@ -102,6 +125,8 @@ RTX 3060 Ti, 3440x1440). Everything else is unknown, so all of this is useful:
 - Ultrawide screens: anything stretched, cut off or in the wrong place.
 - PlayStation controllers and keyboard play.
 - Anything that looks wrong on screen. Screenshots help a lot.
+- Achievements: does the pop-up appear, with its sound, when you earn one?
+  The quickest is "360!": spin the car a full turn in a drift during a race.
 
 Known: online play and Xbox Live features do not work.
 

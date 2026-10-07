@@ -33,6 +33,7 @@ $needed = @(
     (Join-Path $BuildDir 'rexgpu-xenos.dll'),
     (Join-Path $ProjectDir 'RR6 Launcher.exe'),
     (Join-Path $ProjectDir 'gamecontrollerdb.txt'),
+    (Join-Path (Join-Path $ProjectDir 'assets') 'achievement.wav'),
     (Join-Path (Join-Path $ProjectDir 'config') 'rr6_recomp.default.toml'),
     (Join-Path $packageSrc 'README.txt'),
     (Join-Path $packageSrc 'Play without the launcher.bat'),
@@ -64,7 +65,7 @@ if (Test-Path -LiteralPath $zip) { Fail "$zip already exists. Use -Number to pic
 if (Test-Path -LiteralPath $stage) { Remove-Item -LiteralPath $stage -Recurse -Force }
 
 Write-Host "Assembling $name ..."
-foreach ($d in @('', 'bin', 'tools', 'licenses', 'PUT-ISO-HERE')) {
+foreach ($d in @('', 'bin', (Join-Path 'bin' 'sounds'), 'tools', 'licenses', 'PUT-ISO-HERE')) {
     [void](New-Item -ItemType Directory -Force -Path (Join-Path $stage $d))
 }
 
@@ -92,6 +93,9 @@ foreach ($lic in @(Get-ChildItem -LiteralPath (Join-Path $packageSrc 'licenses')
 foreach ($b in @('rr6_recomp.exe', 'rexruntime.dll', 'rexgpu-xenos.dll')) {
     Copy-Item -LiteralPath (Join-Path $BuildDir $b) -Destination (Join-Path $stage 'bin')
 }
+# The sound played with an achievement pop-up (an original chime; assets\achievement.wav).
+Copy-Item -LiteralPath (Join-Path (Join-Path $ProjectDir 'assets') 'achievement.wav') `
+          -Destination (Join-Path (Join-Path (Join-Path $stage 'bin') 'sounds') 'achievement.wav')
 # Starting settings: plain 16:9. The launcher rewrites them for the tester's screen.
 Copy-Item -LiteralPath (Join-Path (Join-Path $ProjectDir 'config') 'rr6_recomp.default.toml') `
           -Destination (Join-Path (Join-Path $stage 'bin') 'rr6_recomp.toml')

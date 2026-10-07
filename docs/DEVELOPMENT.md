@@ -147,6 +147,104 @@ Shift, Ctrl or Alt is held. Steering is digital (full lock or nothing).
 `rr6_log_input = true` (`src/input_fixes.cpp`) logs every change of the pad
 state the game reads, for "my controller does nothing" reports.
 
+**Leaving the game** (`src/quit_prompt.cpp`). The game has no way out of its
+own, and a full-screen window has no close button, so the only way used to be
+Alt+F4. Now Esc, or Back + Start held for a second on a controller, asks "Quit
+Ridge Racer 6?" in the SDK's overlay: Enter or A quits, Esc or B goes back, and
+the two buttons can be clicked. Quitting asks the window to close, which is
+what Alt+F4 does. The game keeps running behind the question; it is given an
+idle controller while the question is up and until the answering button is let
+go, and a question left unanswered for half a minute goes away. Back + Start
+reaches the game before the question appears, so in a race the game's own
+pause menu is up behind it. `rr6_quit_prompt = false` turns it off;
+`rr6_quit_key` names the key. Checked on the Linux rig with the keyboard
+standing in for the pad (tap, long hold with key repeat, Back + Start hold,
+both answers, mouse, clean exit). Built on Windows on 2026-10-06 (17:18) and
+tried there the same day: Esc brought the question up and quit the game, and
+so did the Back + Start hold on an Xbox controller.
+
+## Achievements (`src/achievements.cpp`, `src/unlock_sound.cpp`, `src/overlay_input.cpp`)
+
+The game has 36 achievements, 1000 gamerscore. The SDK already did most of
+the work: it reads names, descriptions and icons out of the game's program
+file (the title resource at 0x82560000), has a handler that records an unlock
+when the game writes one (the game imports XMsgStartIORequest, the call such a
+write goes through; see "When the game awards" below), and keeps unlocks
+in `<user data>\achievements\4E4D07D3.toml`. It also had a pop-up and a list
+window (F7) of its own. Ours replace both (`CreateAchievementsOverlay` returns
+nothing, `CreateAchievementNotificationDialog` returns ours):
+
+- **Pop-up:** bottom centre, the icon in a circle, "Achievement unlocked",
+  gamerscore and name, about five seconds. With it a sound: `achievement.wav`
+  next to the launcher or next to the program if the player put one there,
+  otherwise `sounds\achievement.wav`, an original chime
+  (`tools/make_chime.py`, copied next to the program by the build). Windows
+  plays it with `PlaySound`, Linux through the SDL inside the SDK's runtime
+  library (on Windows the runtime does not export SDL). The Xbox 360's own
+  unlock sound is not shipped; a player who wants it supplies the file.
+- **List:** F7 (`rr6_achievements_key`), or Y from the quit question, which is
+  the way to it with a controller. Scrolls with D-pad, stick, arrow and page
+  keys, mouse wheel; B or Esc closes. Secret achievements (those the game's
+  data does not flag as "show when locked") say nothing until unlocked.
+- **Online only:** 15 need Xbox Live play: International Match, the 50 / 100 /
+  200 online victories, the five Messages from Reiko, the five machine
+  collections and All Machines (435 gamerscore). That list is from players'
+  guides (the Japanese achievement wiki gives the number of online battles
+  each collection needs; a second guide agrees on the messages), not from the
+  game's data. They are shown apart and progress is counted against the other
+  21 (565). Nothing prevents one from unlocking.
+- **For the launcher:** at start-up and on every unlock the game writes
+  `<user data>\achievements\list.txt` (one tab-separated line each: id,
+  gamerscore, online only, secret, unlock time, image, name, both
+  descriptions) and the icons as PNG files (`icons\<image id>.png`, copied out
+  of the game's program in memory). The launcher's Achievements page reads
+  those; until the game has run once it says so. It also has a button that
+  plays the sound.
+- **Input** for the list and the quit question is shared
+  (`overlay_input.cpp`): one keyboard listener ahead of the SDK's, and the
+  controller as the game reads it. Controller answers therefore only arrive
+  while the game is reading the controller, which it does not do during some
+  loading screens.
+- `rr6_preview_achievement = N` shows the pop-up for achievement N a few
+  seconds after start without unlocking anything; `rr6_achievement_sound =
+  false` silences it.
+
+Checked on the Linux rig: the pop-up by preview and by a real unlock made
+through the SDK (a rig-only switch in `rig_probe.cpp`), the unlock file, the
+list by F7 and by Esc then Y, scrolling by keys and by the stick, closing with
+B without the game seeing it, the sound (recorded from the rig's sound output:
+the chime's three notes are in it), the files for the launcher. Launcher page:
+under Wine, with the rig's files.
+
+On Windows (2026-10-07): "360!" was earned by playing (with the executable
+of test build 05, so with the SDK's own pop-up; `XGIUserWriteAchievements:
+id=1` in `logs\run.log`). The achievements code itself was first built on
+Windows later that morning; the build before had failed on a local variable
+named `small`, a macro in the Windows headers (`tools/check_windows_names.py`
+now looks for such names, and the workflow runs it). With that build: the
+icons and the list were written, the launcher's Achievements page showed
+them, the game quit through the quit question. **Not yet seen on Windows:**
+the new pop-up with its chime, and the list in the game. Test build 06 /
+v0.1.2 is this build.
+
+**When the game awards.** Not at the moment something is done, but in the
+save sequence after a race. For "360!": the race update (sub_820F1E88) sets
+bit 4 of the player's flags (+740) once the car's spin counter (+652) is not
+zero; the code that closes a race (sub_821F5910, sub_821F2BC0, and the result
+evaluators sub_821F1230 and sub_821A5970) then marks achievement index 0 as
+earned in the achievement manager at 0x824939A0 (sub_82129818: 36 records of
+20 bytes, byte 16 = earned, byte 17 = written); and state 20 of the save
+sequence (sub_8218A4D8) calls sub_82129868, which sends one
+`XUserWriteAchievements` request (XMsg 0x000B0008, through sub_8222C638) per
+earned record, for the user index kept at 0x823B0C34. A race that is left
+before the finish therefore gives nothing, as on the console. First report
+from Windows (2026-10-07): a 360 spin, no pop-up; the log of that session has
+no save after the race and no `XGIUserWriteAchievements` line, so the race
+was not finished. The path from the manager on was then run on the rig
+(`rig_game_award_after` in `rig_probe.cpp` marks index 0 and calls the write
+step): user index 0, the SDK logged `XGIUserWriteAchievements: id=1` and
+"Achievement unlocked", the request completed with result 0.
+
 ## Display settings
 
 The game stays at its native 60 fps (its speed is tied to the display tick).
@@ -255,7 +353,13 @@ Still to confirm on Windows: progress survives a restart; saving after a race.
   exceptions there (crash 2: float inexact result in the audio mixer).
 - `fp_guard.cpp`: safety net for the same problem elsewhere; logs to
   `logs\fp-guard.txt`.
-- `save_fixes.cpp`, `widescreen.cpp`, `input_fixes.cpp`: see above.
+- `lod_bias_fix.cpp`: sets the game's texture LOD bias to zero on Linux. The
+  SDK's Vulkan shader translator reads a texture's exponent bias from the word
+  that holds the LOD bias, so the game's bias of -1.0 on track textures
+  multiplied their colour by 2^-16: a black track (`SDK-NOTES.md`, 7). Off by
+  default on Windows.
+- `save_fixes.cpp`, `widescreen.cpp`, `input_fixes.cpp`, `quit_prompt.cpp`,
+  `overlay_input.cpp`, `achievements.cpp`, `unlock_sound.cpp`: see above.
 - `depth_bias_fix.cpp`: rounds the slope-scaled depth bias so that Direct3D 12
   does not build a new pipeline for every draw (see "Known issues").
 
@@ -317,6 +421,8 @@ the rig says nothing about D3D12-specific behaviour such as the pipeline cache.
     RR6 Launcher.exe           the launcher (prebuilt)
     gamecontrollerdb.txt       SDL community controller mappings
     package/                   static files of the tester package + make-package.ps1
+    linux/                     Linux start script, READMEs, bug-report and packaging scripts
+    build-linux.sh             Linux build (game binary and launcher/rr6-extract)
     make-tester-package.bat    builds ..\dist\RidgeRacer6-PC-TestBuild-NN.zip
     SDK-NOTES.md               findings to report to the SDK
     analysis/                  import list, pointer-target report, unpacked image
@@ -380,6 +486,124 @@ Builds so far (all in `..\dist`, each with its private `.map`):
   `bug-report.zip`, so a report can be attached to a public issue; the README
   has a short safety note. The script change was checked with PowerShell 7 on
   Linux, not on Windows.
+- 05: game executable built 2026-10-06 17:18 with the quit question
+  (`src/quit_prompt.cpp`), played on Windows from the build folder (see
+  "Controls"). The launcher differs from 04's in one line of text (Esc instead
+  of Alt+F4); it was looked at under Wine, and this zip itself has not been
+  run on Windows. Published name: `RidgeRacer6-PC-v0.1.1.zip`.
+
+## Linux and Steam Deck packages (`linux/`, `build-linux.sh`)
+
+Made on request after the first release; first packages on 2026-10-06 as
+`..\dist\RidgeRacer6-Linux-TestBuild-01.tar.gz` and
+`RidgeRacer6-SteamDeck-TestBuild-01.tar.gz`. **Run on real hardware once so
+far: build 02 on a Steam Deck (2026-10-07), see "First run on a Steam Deck"
+below. Build 03 has only been run on the software-rendering rig.**
+
+**The program.** The same sources, built by `build-linux.sh` (Clang 18, CMake,
+Ninja) against the SDK's Linux package. On Linux the SDK is two shared
+libraries, `librexruntime.so` and the graphics plugin `librexgpu-xenos.so`
+(Vulkan), which go into the package next to `rr6_recomp`. What the three need
+on the machine, as read from the binaries: glibc 2.35, `GLIBCXX_3.4.32` (the
+C++ library of GCC 13.2; this comes from the SDK's prebuilt libraries and is
+what rules out Ubuntu 22.04 and Debian 12), libX11, libX11-xcb, libxcb,
+libwayland-client, and a processor with SSE4.1. Vulkan and the sound system
+are loaded at run time. Save data and the shader cache go to
+`~/.local/share/rr6_recomp`.
+
+**The disc-image tool.** `launcher/rr6_extract.cpp` is a command-line face for
+`disc_image.cpp`, the code the Windows launcher copies the game files with:
+same version check, same markers in the game folder, progress as text. Linked
+statically. Run on the real disc image on Ubuntu 22.04: 45 files, identical to
+the copy the Windows side made.
+
+**The start script.** `linux/ridge-racer-6.sh` stands in for the launcher:
+
+- checks the processor and, with `ldd`, that the system's libraries are new
+  enough, and says which are not;
+- first start: takes the disc image from `--iso`, from an `.iso` put into the
+  package folder, from a file-chooser window (kdialog or zenity), or from a
+  path typed into the terminal, and runs the disc-image tool. Started from a
+  file manager it opens itself in a terminal window for this;
+- first start: writes `bin/rr6_recomp.toml` with the Windows launcher's
+  "Automatic" rules (render size from the screen height, a wide screen filled),
+  the screen size taken from `xrandr` or `xdpyinfo`. On a Steam Deck (the
+  package's `steam-deck` marker file, or the machine's name Jupiter / Galileo)
+  it writes 1280x720 with bars instead;
+- starts the game through X11 (`SDL_VIDEO_DRIVER=x11`; `--wayland` leaves the
+  choice to SDL, untested), and without Steam's library folders if the library
+  check only passes without them;
+- removes `/dev/shm/xenia_memory_*` when no game is running, before and after
+  a run: a game that is killed leaves its guest memory there (several hundred
+  MB of memory each time, until the next restart);
+- watches the log while the game runs. On Linux a fault in the game's own code
+  does not end the program: the SDK logs "Unhandled guest access violation"
+  and the same fault repeats without end, at full processor load, with a
+  frozen picture, and the log (5 MB files, ten kept) loses the cause within a
+  minute. Seen with the stand-in disc image below. The script keeps the 400
+  lines up to the first fault in `logs/fault.txt` and stops the game.
+
+`linux/collect-report.sh` packs logs, settings and a description of the system
+into `bug-report.tar.gz`, with the user name, home folder and host name
+replaced. `linux/make-package.sh <n>` builds both archives and keeps the
+unstripped binary next to them as the private symbols file.
+
+**The two packages** hold the same files except for the README and the
+`steam-deck` marker. Layout: `ridge-racer-6.sh`, `README.txt`, `BUILD.txt`,
+`bin/` (program, the two libraries, `rr6-extract`, `gamecontrollerdb.txt`, the
+settings once written), `tools/collect-report.sh`, `licenses/`; `game/` and
+`logs/` appear on the first start.
+
+**Checked** (all on the software-rendering rig unless said otherwise):
+
+- first start from a "file manager" (no terminal): terminal window opens, the
+  file chooser picks the image, copy, settings, game starts;
+- first start in a terminal with the image in the package folder (a name with
+  spaces), Steam Deck package: Deck settings written;
+- these two used a stand-in image: the real disc's layout and real
+  `default.xex`, every other file empty. The game then faults, which is how
+  the endless-fault behaviour and the watchdog were seen;
+- with the real game files: start from both packages, the quit question by
+  keyboard and by the Back + Start hold, exit status 0, windowed start;
+- the bug report's contents; the "system too old" message on a real Ubuntu
+  22.04; `build-linux.sh` and `make-package.sh` from a fresh copy of the
+  repository (recompile, build, package).
+
+**Not checked:** build 03 on any real graphics card or on a Steam Deck,
+Steam's Game Mode, the "started from outside Steam" notice and
+`steamos-add-to-steam` on a real Deck, a Wayland desktop, real sound output,
+controllers on Linux, KDE's kdialog chooser, terminal programs other than
+xterm.
+
+**First run on a Steam Deck (build 02, 2026-10-07).** Two reports:
+
+1. *The track is very dark, as if textures were missing.* The rig showed the
+   same thing, and had done so in every race since the first Linux run; it had
+   been taken for a side effect of software rendering. It is the SDK fault
+   described under `lod_bias_fix.cpp` above. How it was found, for the next
+   graphics problem: RenderDoc 1.36 (the Linux tarball from renderdoc.org;
+   `renderdoccmd vulkanlayer --register --user`, then
+   `renderdoccmd capture -c <file> ./rr6_recomp ... --vulkan_sparse_shared_memory=false`,
+   F12 held for several seconds on the rig). A capture is the time between two
+   presents, which is not one game frame, so take several and use a large one.
+   `qrenderdoc --python script.py` runs analysis scripts without the window
+   being used (answer its first-run question once): the list of draws with
+   their render targets, pixel history for one road pixel, then the shader
+   debugger on the draw that wrote it. The debugger refuses the SDK's shaders
+   ("Unsupported capability RoundingModeRTE") until the float-controls
+   capability, extension and execution modes are cut out of a copy of the
+   SPIR-V and the copy is put in place with `ReplaceResource`. Build 03 on the
+   rig: the first track looks like the Windows screenshots.
+2. *Y selects in the menus and nothing accelerates.* The game had been started
+   by a double click in Desktop Mode, as the README then said. There the
+   Deck's buttons are a keyboard and mouse (Steam's desktop layout: Y is
+   Space, A is Enter, the triggers are mouse buttons), and the game's keyboard
+   layout has Space as A. Not a fault in the game: under Steam the Deck is an
+   Xbox controller. Since build 03 the start script stops on a Deck when it
+   was not started by Steam (`SteamGameId` and similar variables, or
+   gamescope), explains, and offers "Add to Steam" (`steamos-add-to-steam`),
+   "Start anyway" (remembered in `bin/.outside-steam-ok`; `--outside-steam`
+   does the same for one start) or closing. Untested on a Deck.
 
 ## Publishing the source
 
@@ -400,3 +624,6 @@ any executable.
 2. The rest of the checklist: save and reload, keyboard, PlayStation pad.
 3. Wider play-testing: all tracks, videos, long sessions, other GPUs.
 4. Report the SDK findings upstream (`SDK-NOTES.md`).
+5. Get the Linux packages run on real hardware: a desktop with a graphics card
+   and a Steam Deck. First things to learn: does it start, at what speed, and
+   does anything look wrong under a real Vulkan driver.

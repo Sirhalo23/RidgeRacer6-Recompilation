@@ -18,5 +18,7 @@
 *.o
 *.obj
 bug-report.zip
+bug-report.tar.gz
+/launcher/rr6-extract
 launcher-art.*
 __pycache__/

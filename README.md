@@ -56,6 +56,34 @@ To check that the file is the one published here, compare its SHA-256 with
 If your antivirus names a specific threat instead of giving one of the
 warnings above, please [open an issue](../../issues) with its exact wording.
 
+## Linux and Steam Deck (experimental)
+
+There is a test build for desktop Linux,
+`RidgeRacer6-Linux-TestBuild-<n>.tar.gz`, under [Releases](../../releases)
+(marked as a pre-release). It is drawn with Vulkan. A Steam Deck package of
+the same program, `RidgeRacer6-SteamDeck-TestBuild-<n>.tar.gz`, with settings
+and instructions for the Deck, is being tested on a Deck and will be added to
+the same release.
+
+It is experimental. Test build 02 was tried once on a Steam Deck: it started,
+but drew the track black, which test build 03 fixes. Build 03 itself has only
+been run on a machine without a graphics card, with software rendering, so
+expect problems, and please report what you find.
+
+On a Steam Deck, add the game to Steam and start it from there: only then do
+the Deck's buttons work as a controller.
+
+1. Unpack the archive in your home folder.
+2. Start `ridge-racer-6.sh`. The first time, it asks for your Ridge Racer 6
+   `.iso` (or uses one you put into the folder), checks it, and copies the game
+   files out of it.
+3. The game starts. Settings are in `bin/rr6_recomp.toml`, written for your
+   screen on the first start; F4 in the game changes them.
+
+Needs a 64-bit system from 2024 or later (glibc 2.35 and the C++ library of
+GCC 13.2: Ubuntu 24.04, Debian 13, Fedora 39, SteamOS 3.6, Arch) and a Vulkan
+driver. `README.txt` in each archive has the details.
+
 ## Features
 
 - **Launcher** with display settings, key bindings and the disc-image copy.
@@ -68,6 +96,10 @@ warnings above, please [open an issue](../../issues) with its exact wording.
 - **Controllers:** Xbox and PlayStation pads through SDL, with no setup.
 - **Keyboard:** works alongside a controller; every key can be changed.
 - **Saving** to `Documents\rr6_recomp`.
+- **Quitting** from the keyboard or the controller, with a question first.
+- **Achievements:** the game's 36, with a pop-up and a sound when you earn
+  one, a list in the game (F7, or Y from the quit question) and in the
+  launcher. The 15 that need Xbox Live are shown apart.
 - **Bug reports:** the launcher can record a detailed log and pack it, with
   your PC's specifications and without your Windows user name, into one zip.
 
@@ -99,8 +131,26 @@ names.
 | Numpad 8 2 4 6 | D-pad |
 | I K J L | Right stick |
 
-While playing: F4 opens the settings, F3 shows frame-rate statistics, Alt+F4
-closes the game.
+While playing: F4 opens the settings and F3 shows frame-rate statistics.
+
+To leave the game, press Esc, or hold Back + Start on a controller for a
+second. The game asks whether to quit: Enter or A quits, Esc or B goes back.
+
+## Achievements
+
+Ridge Racer 6 has 36 achievements worth 1000 gamerscore, and they work here:
+the game reports them as it did on the console, a pop-up with a sound appears,
+and the unlock is kept with your save data. Press F7 while playing for the
+list, or Esc and then Y; on a controller hold Back + Start for a second and
+then press Y. The launcher has an Achievements page as well.
+
+Fifteen of them need Xbox Live play (the online-battle ones, and those that
+need cars only given for online battles), which this version does not have.
+They are listed apart, and progress is counted against the 21 that can be
+earned, 565 of the 1000 gamerscore.
+
+The sound is an original chime. To use another, put your own `achievement.wav`
+next to the launcher (on Linux, next to `ridge-racer-6.sh`).
 
 ## Known limitations
 
@@ -114,14 +164,15 @@ closes the game.
 - Keyboard steering is all-or-nothing; a controller is the better way to play.
 - Without a sound output device the game closes right after starting (the
   launcher warns about this).
-- Windows only for now. The same sources build on Linux, but that build has
-  only been used for testing.
+- The Linux and Steam Deck builds have hardly been run on real graphics
+  hardware, and have no settings window: settings are a text file. Distant
+  textures are slightly softer there than on Windows.
 
 ## Building it yourself
 
 See [BUILDING.md](BUILDING.md). In short: your own `default.xex`, the ReXGlue
 SDK v0.10.0, Visual Studio's C++ build tools and Clang, then
-`build-windows.bat`.
+`build-windows.bat`; on Linux, Clang, CMake and Ninja, then `build-linux.sh`.
 
 ## Reporting problems
 
