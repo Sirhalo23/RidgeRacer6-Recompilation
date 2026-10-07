@@ -665,7 +665,7 @@ Building the SDK from source on Linux (Ubuntu 24.04), as done on the rig:
 
 Clang 18 does not do: with GCC 13's standard library it has no
 `std::expected`, which the SDK uses. The build is 843 steps and took about
-25 minutes on two cores. The results are `out/linux-amd64/Release/
+8 minutes on two cores. The results are `out/linux-amd64/Release/
 librexruntime.so` and `librexgpu-xenos.so`.
 
 Trying a rebuilt runtime with an existing game build needs no relinking: put
