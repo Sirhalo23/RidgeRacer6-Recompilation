@@ -390,10 +390,11 @@ class Popup : public rex::ui::AchievementNotificationDialog {
     char score[32];
     std::snprintf(score, sizeof(score), "%uG", info.gamerscore);
     const char* heading = "Achievement unlocked";
-    const float small = 16 * u, large = 22 * u;
-    const ImVec2 heading_size = Measure(small, heading);
-    const ImVec2 score_size = Measure(large, score);
-    const ImVec2 name_size = Measure(large, info.label.c_str());
+    // Not "small": the Windows headers define that word as a macro.
+    const float small_px = 16 * u, large_px = 22 * u;
+    const ImVec2 heading_size = Measure(small_px, heading);
+    const ImVec2 score_size = Measure(large_px, score);
+    const ImVec2 name_size = Measure(large_px, info.label.c_str());
     const float height = 80 * u, icon = 60 * u, edge = (height - icon) * 0.5f;
     const float text_width = std::max(heading_size.x, score_size.x + 12 * u + name_size.x);
     const float width = std::max(380 * u, edge + icon + 18 * u + text_width + 36 * u);
@@ -415,9 +416,9 @@ class Popup : public rex::ui::AchievementNotificationDialog {
     const float tx = icon_at.x + icon + 18 * u;
     const float block = heading_size.y + 5 * u + score_size.y;
     const float ty = y + (height - block) * 0.5f;
-    Text(list, small, ImVec2(tx, ty), WithAlpha(kQuiet, alpha), heading);
-    Text(list, large, ImVec2(tx, ty + heading_size.y + 5 * u), WithAlpha(kLime, alpha), score);
-    Text(list, large, ImVec2(tx + score_size.x + 12 * u, ty + heading_size.y + 5 * u),
+    Text(list, small_px, ImVec2(tx, ty), WithAlpha(kQuiet, alpha), heading);
+    Text(list, large_px, ImVec2(tx, ty + heading_size.y + 5 * u), WithAlpha(kLime, alpha), score);
+    Text(list, large_px, ImVec2(tx + score_size.x + 12 * u, ty + heading_size.y + 5 * u),
          WithAlpha(kWhite, alpha), info.label.c_str());
   }
 
