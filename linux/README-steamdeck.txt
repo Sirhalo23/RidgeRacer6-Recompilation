@@ -5,9 +5,12 @@ An unofficial native Linux version of Ridge Racer 6 (Xbox 360, USA disc) for
 the Steam Deck, made by recompiling the game's program. It contains no game
 data: you need your own Ridge Racer 6 (USA) disc image (.iso).
 
-This is the first build for the Deck, and it is experimental. Nobody has yet
-run it on a Steam Deck: you may be the first. It may not start, or may run
-slowly. Please report what you see (see REPORTING A PROBLEM).
+This build is experimental. Build 02 was tried once on a Steam Deck: it
+started, but the track was drawn black, and the controls were wrong because it
+had been started from outside Steam. Build 03 deals with both: the black track
+is fixed (checked with software rendering, not yet on a Deck), and the start
+script now says so when it is not started from Steam. How fast it runs on a
+Deck is not known yet. Please report what you see (see REPORTING A PROBLEM).
 
 
 WHAT YOU NEED
@@ -34,23 +37,33 @@ SETTING UP (ONCE, IN DESKTOP MODE)
    (Without this step the script opens a window to choose the file.)
 5. Double-click "ridge-racer-6.sh" and choose "Execute" if asked.
    A terminal window shows the game files being copied (about 6 GB, several
-   minutes). Then the game starts. Leave it again: hold View + Menu (the two
-   small buttons either side of the screen) for a second, then press A.
-6. Add the game to Steam: right-click "ridge-racer-6.sh" in Dolphin and
-   choose "Add to Steam". (Or in the Steam window: Games > "Add a Non-Steam
-   Game to My Library" > Browse, and pick ridge-racer-6.sh.)
+   minutes).
+6. When the copy is done, the script says that it was started from outside
+   Steam and asks what to do. Type a and press Enter: it adds the game to
+   Steam and closes. (By hand instead: right-click "ridge-racer-6.sh" in
+   Dolphin and choose "Add to Steam", or in the Steam window choose Games >
+   "Add a Non-Steam Game to My Library" > Browse, and pick ridge-racer-6.sh.)
 7. The .iso in the folder is not needed any more; delete it to get the space
    back.
 8. Go back to Gaming Mode ("Return to Gaming Mode" on the desktop). The game
    is in your Library under "Non-Steam", as ridge-racer-6.sh. You can rename
-   it there (gear icon > Properties).
+   it there (gear icon > Properties). Start it from there.
+
+ALWAYS START THE GAME FROM STEAM. The Deck's buttons are an Xbox controller
+only for programs that Steam starts. Started by a double click in Desktop
+Mode, they act as a keyboard and mouse instead: Y confirms in the menus and
+nothing accelerates. The start script warns about this; "Start anyway" is for
+playing with a keyboard or a controller you have plugged in.
 
 
 PLAYING
 -------
-The Deck's own controls work as an Xbox controller; the game shows Xbox
-button names (A, B, X, Y, LB/RB, LT/RT). Start is the Menu button (right of
-the screen), Back is the View button (left of the screen).
+Started from Steam, the Deck's own controls work as an Xbox controller; the
+game shows Xbox button names (A, B, X, Y, LB/RB, LT/RT). Start is the Menu
+button (right of the screen), Back is the View button (left of the screen).
+If the buttons do the wrong things, the game was started from outside Steam
+(see above), or its controller layout in Steam is not a gamepad one: with the
+game selected, press the controller icon and pick the "Gamepad" template.
 
 To leave the game: hold View + Menu for a second; the game asks whether to
 quit; A quits, B goes back. Or press the Steam button and choose "Exit game".

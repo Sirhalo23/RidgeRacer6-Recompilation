@@ -5,10 +5,14 @@ An unofficial native Linux version of Ridge Racer 6 (Xbox 360, USA disc),
 made by recompiling the game's program. It contains no game data: you need
 your own Ridge Racer 6 (USA) disc image (.iso).
 
-This is the first Linux build, and it is experimental. It has been run from
-start to finish only on a test machine without a graphics card (very slowly,
-with software rendering). Nobody has yet played it at full speed on Linux:
-you may be the first. Please report what you see (see REPORTING A PROBLEM).
+This build is experimental. It has been run from start to finish only on a
+test machine without a graphics card (very slowly, with software rendering),
+and an earlier build was tried once on a Steam Deck. Nobody has yet played it
+on a desktop graphics card: you may be the first. Please report what you see
+(see REPORTING A PROBLEM).
+
+New in build 03: the track is no longer drawn black. Road, scenery and sky
+were black in builds 01 and 02 on every machine.
 
 
 WHAT YOU NEED
@@ -112,7 +116,11 @@ To remove everything, delete this folder and ~/.local/share/rr6_recomp.
 
 KNOWN LIMITATIONS
 -----------------
-- Untested on real graphics hardware (see the top of this file).
+- Hardly tested on real graphics hardware (see the top of this file).
+- Textures far down the road are a little softer than in the Windows build:
+  the game's own sharpening is switched off here, because the graphics code
+  this build uses turns it into a brightness error (the black track of builds
+  01 and 02).
 - The game runs through X11 (XWayland on a Wayland desktop). To let it try
   Wayland directly:  ./ridge-racer-6.sh --wayland
 - Online play does not work. Leave "Online Battle" alone.

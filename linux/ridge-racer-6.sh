@@ -13,6 +13,7 @@
 #   --windowed       this once, run in a window
 #   --diagnostic     this once, record a detailed log (logs/run.log)
 #   --wayland        this once, let the game pick Wayland instead of X11
+#   --outside-steam  Steam Deck: start even though Steam did not start this
 #   --help
 #
 # Settings are in bin/rr6_recomp.toml (a text file); F4 in the game changes
@@ -31,6 +32,7 @@ new_settings=0
 windowed=0
 diagnostic=0
 wayland=0
+outside_steam=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --iso) image="${2:-}"; shift ;;
@@ -40,8 +42,9 @@ while [ $# -gt 0 ]; do
     --windowed) windowed=1 ;;
     --diagnostic) diagnostic=1 ;;
     --wayland) wayland=1 ;;
+    --outside-steam) outside_steam=1 ;;
     --in-own-terminal) RR6_OWN_TERMINAL=1 ;;
-    -h|--help) sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n '2,21p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *.iso|*.ISO) image="$1" ;;
     *) echo "Unknown option: $1 (try --help)"; exit 2 ;;
   esac
@@ -156,6 +159,7 @@ if { ! game_ready || [ "$copy_again" = 1 ]; } && [ ! -t 1 ] && [ -z "${RR6_OWN_T
   [ "$windowed" = 1 ] && again+=(--windowed)
   [ "$diagnostic" = 1 ] && again+=(--diagnostic)
   [ "$wayland" = 1 ] && again+=(--wayland)
+  [ "$outside_steam" = 1 ] && again+=(--outside-steam)
   if have konsole; then exec konsole -e "${again[@]}"
   elif have gnome-terminal; then exec gnome-terminal --wait -- "${again[@]}"
   elif have kgx; then exec kgx -- "${again[@]}"
@@ -259,11 +263,16 @@ screen_size() {
   printf '%s' "$out"
 }
 
+# The machine itself is a Steam Deck (LCD: Jupiter, OLED: Galileo).
+deck_hardware() {
+  local file="${RR6_PRODUCT_NAME_FILE:-/sys/devices/virtual/dmi/id/product_name}" name=""
+  [ -r "$file" ] && name="$(cat "$file" 2>/dev/null)"
+  [ "$name" = Jupiter ] || [ "$name" = Galileo ]
+}
+
 on_steam_deck() {
   [ -f "$HERE/steam-deck" ] && return 0
-  local name=""
-  [ -r /sys/devices/virtual/dmi/id/product_name ] && name="$(cat /sys/devices/virtual/dmi/id/product_name 2>/dev/null)"
-  [ "$name" = Jupiter ] || [ "$name" = Galileo ]
+  deck_hardware
 }
 
 write_settings() {
@@ -408,6 +417,67 @@ clear_leftovers() {
   fi
 }
 clear_leftovers
+
+# ------------------------------------- Steam Deck: started from outside Steam
+#
+# The Deck's own buttons reach a program as an Xbox controller only when Steam
+# starts that program. Started any other way in Desktop Mode (a double click,
+# a terminal), they act as a keyboard and mouse: Y sends Space, A sends Enter,
+# the triggers send mouse clicks. The game takes Space for its A button and has
+# nothing to accelerate with. So before starting, say so and offer to put the
+# game into Steam. "Start anyway" is remembered (for a controller plugged in,
+# or a keyboard).
+started_by_steam() {
+  [ -n "${SteamGameId:-}${SteamOverlayGameId:-}${SteamClientLaunch:-}${GAMESCOPE_WAYLAND_DISPLAY:-}" ] && return 0
+  case "${LD_PRELOAD:-}" in *gameoverlayrenderer*) return 0 ;; esac
+  [ "${XDG_CURRENT_DESKTOP:-}" = gamescope ]
+}
+
+add_to_steam() {
+  local me
+  me="$HERE/$(basename "$0")"
+  if have steamos-add-to-steam && steamos-add-to-steam "$me" >/dev/null 2>&1; then
+    tell info "Added. In Steam the game is under Library > Non-Steam, as $(basename "$0"); the gear icon > Properties renames it.
+
+Start it from there. It plays best in Gaming Mode (\"Return to Gaming Mode\" on the desktop)."
+  else
+    tell info "It could not be added automatically. To add it by hand: in the Steam window choose Games > \"Add a Non-Steam Game to My Library\", then Browse, and pick
+$me
+
+Then start it from Steam (Library > Non-Steam), best in Gaming Mode."
+  fi
+}
+
+if deck_hardware && ! started_by_steam && [ "$outside_steam" = 0 ] && [ ! -f "$BIN/.outside-steam-ok" ]; then
+  notice="This was started from outside Steam. Here the Steam Deck's own buttons work as a keyboard and mouse, not as a controller, so the game's controls will be wrong (Y confirms, nothing accelerates).
+
+Start the game from Steam instead: Library > Non-Steam, best in Gaming Mode. The game files are copied and ready."
+  choice=""
+  if [ -t 0 ] && [ -t 1 ]; then
+    echo
+    echo "$notice"
+    echo
+    read -r -p "Type a to add the game to Steam, s to start it anyway, or just Enter to close: " choice
+  elif graphical && have kdialog; then
+    kdialog --title "$TITLE" --warningyesnocancel "$notice
+
+Add the game to Steam now?" --yes-label "Add to Steam" --no-label "Start anyway" --cancel-label "Close"
+    case $? in 0) choice=a ;; 1) choice=s ;; *) choice="" ;; esac
+  elif graphical && have zenity; then
+    if zenity --question --title="$TITLE" --no-wrap --ok-label="Add to Steam" --cancel-label="Start anyway" --text="$notice
+
+Add the game to Steam now?" 2>/dev/null; then choice=a; else choice=s; fi
+  else
+    echo
+    echo "$notice"
+    choice=s
+  fi
+  case "$choice" in
+    a|A) add_to_steam; finish 0 ;;
+    s|S) : > "$BIN/.outside-steam-ok" ;;
+    *) finish 0 ;;
+  esac
+fi
 
 echo "Starting $TITLE. To leave the game: Esc, or hold Back + Start on a controller."
 cd "$BIN" || fail "The folder $BIN cannot be entered."

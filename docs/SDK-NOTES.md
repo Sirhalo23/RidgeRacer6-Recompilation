@@ -101,7 +101,36 @@ thunks had to be listed by hand in the manifest. `tools/find_orphan_targets.py`
 finds them by scanning data and `lis/addi` pairs for addresses that land on a
 `.pdata` function start.
 
-## 7. Smaller observations
+## 7. Vulkan: the texture result exponent bias is read from the wrong word
+
+`src/graphics/pipeline/shader/spirv_translator_fetch.cpp`, in the texture
+fetch (the block commented "Apply the exponent bias from the bits 13:18 of the
+fetch constant word 4"): the multiplier for the sampled colour is built with
+`OpBitFieldSExtract(fetch_constant_word_4_signed, 13, 6)`. The field is
+`exp_adjust`, bits 13-18 of dword 3 of `xe_gpu_texture_fetch_t`
+(`include/rex/graphics/xenos.h`); dword 4, loaded just above for the LOD bias,
+holds `lod_bias` in bits 12-21. The Direct3D 12 translator reads the right
+word (`dxbc_translator_fetch.cpp`: `RequestTextureFetchConstantWord(tfetch_index, 3)`).
+
+So on Vulkan every texture with a mip LOD bias has its colour multiplied by
+two to the power of bits 1-6 of that bias, and a real exponent bias is
+ignored. A game that never sets a LOD bias does not show it. Ridge Racer 6
+sets -1.0 (`0x3E0` in the 10-bit field) on its track textures: the factor is
+2^-16, and road, terrain, buildings and sky are black while cars, signs and
+the race display are right; other bias values turned some trees white. Seen
+on lavapipe and on a Steam Deck (RADV).
+
+Found with RenderDoc 1.36: pixel history on a road pixel named the draw; its
+pixel shader, run in the shader debugger (after removing the float-controls
+capabilities, which that debugger does not support), showed the texture
+returning 0.666 and the register receiving 0.0000102, with `-16` coming out
+of the bit-field extract of `fetch_constants[2].z` = `0x003E0E43`.
+
+Workaround here: `src/lod_bias_fix.cpp` sets the game's LOD bias to zero on
+Linux (`rr6_zero_lod_bias`). The fix in the SDK is to load word 3 for this
+extract.
+
+## 8. Smaller observations
 
 - `present_effect` only accepts `bilinear` in the prebuilt Windows runtime
   (FidelityFX is not compiled in), although the help text lists cas/fsr.

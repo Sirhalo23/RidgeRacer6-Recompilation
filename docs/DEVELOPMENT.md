@@ -326,6 +326,11 @@ Still to confirm on Windows: progress survives a restart; saving after a race.
   exceptions there (crash 2: float inexact result in the audio mixer).
 - `fp_guard.cpp`: safety net for the same problem elsewhere; logs to
   `logs\fp-guard.txt`.
+- `lod_bias_fix.cpp`: sets the game's texture LOD bias to zero on Linux. The
+  SDK's Vulkan shader translator reads a texture's exponent bias from the word
+  that holds the LOD bias, so the game's bias of -1.0 on track textures
+  multiplied their colour by 2^-16: a black track (`SDK-NOTES.md`, 7). Off by
+  default on Windows.
 - `save_fixes.cpp`, `widescreen.cpp`, `input_fixes.cpp`, `quit_prompt.cpp`,
   `overlay_input.cpp`, `achievements.cpp`, `unlock_sound.cpp`: see above.
 - `depth_bias_fix.cpp`: rounds the slope-scaled depth bias so that Direct3D 12
@@ -464,8 +469,9 @@ Builds so far (all in `..\dist`, each with its private `.map`):
 
 Made on request after the first release; first packages on 2026-10-06 as
 `..\dist\RidgeRacer6-Linux-TestBuild-01.tar.gz` and
-`RidgeRacer6-SteamDeck-TestBuild-01.tar.gz`. **Not run on real graphics
-hardware or on a Steam Deck by anyone yet.**
+`RidgeRacer6-SteamDeck-TestBuild-01.tar.gz`. **Run on real hardware once so
+far: build 02 on a Steam Deck (2026-10-07), see "First run on a Steam Deck"
+below. Build 03 has only been run on the software-rendering rig.**
 
 **The program.** The same sources, built by `build-linux.sh` (Clang 18, CMake,
 Ninja) against the SDK's Linux package. On Linux the SDK is two shared
@@ -536,9 +542,41 @@ settings once written), `tools/collect-report.sh`, `licenses/`; `game/` and
   22.04; `build-linux.sh` and `make-package.sh` from a fresh copy of the
   repository (recompile, build, package).
 
-**Not checked:** any real graphics card or driver, a Steam Deck, Steam's Game
-Mode and "Add to Steam", a Wayland desktop, real sound output, controllers on
-Linux, KDE's kdialog chooser, terminal programs other than xterm.
+**Not checked:** build 03 on any real graphics card or on a Steam Deck,
+Steam's Game Mode, the "started from outside Steam" notice and
+`steamos-add-to-steam` on a real Deck, a Wayland desktop, real sound output,
+controllers on Linux, KDE's kdialog chooser, terminal programs other than
+xterm.
+
+**First run on a Steam Deck (build 02, 2026-10-07).** Two reports:
+
+1. *The track is very dark, as if textures were missing.* The rig showed the
+   same thing, and had done so in every race since the first Linux run; it had
+   been taken for a side effect of software rendering. It is the SDK fault
+   described under `lod_bias_fix.cpp` above. How it was found, for the next
+   graphics problem: RenderDoc 1.36 (the Linux tarball from renderdoc.org;
+   `renderdoccmd vulkanlayer --register --user`, then
+   `renderdoccmd capture -c <file> ./rr6_recomp ... --vulkan_sparse_shared_memory=false`,
+   F12 held for several seconds on the rig). A capture is the time between two
+   presents, which is not one game frame, so take several and use a large one.
+   `qrenderdoc --python script.py` runs analysis scripts without the window
+   being used (answer its first-run question once): the list of draws with
+   their render targets, pixel history for one road pixel, then the shader
+   debugger on the draw that wrote it. The debugger refuses the SDK's shaders
+   ("Unsupported capability RoundingModeRTE") until the float-controls
+   capability, extension and execution modes are cut out of a copy of the
+   SPIR-V and the copy is put in place with `ReplaceResource`. Build 03 on the
+   rig: the first track looks like the Windows screenshots.
+2. *Y selects in the menus and nothing accelerates.* The game had been started
+   by a double click in Desktop Mode, as the README then said. There the
+   Deck's buttons are a keyboard and mouse (Steam's desktop layout: Y is
+   Space, A is Enter, the triggers are mouse buttons), and the game's keyboard
+   layout has Space as A. Not a fault in the game: under Steam the Deck is an
+   Xbox controller. Since build 03 the start script stops on a Deck when it
+   was not started by Steam (`SteamGameId` and similar variables, or
+   gamescope), explains, and offers "Add to Steam" (`steamos-add-to-steam`),
+   "Start anyway" (remembered in `bin/.outside-steam-ok`; `--outside-steam`
+   does the same for one start) or closing. Untested on a Deck.
 
 ## Publishing the source
 

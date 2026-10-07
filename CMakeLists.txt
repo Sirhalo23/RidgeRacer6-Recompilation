@@ -24,6 +24,7 @@ set(RR6RECOMP_SOURCES
     src/unlock_sound.cpp
     src/widescreen.cpp
     src/depth_bias_fix.cpp
+    src/lod_bias_fix.cpp
 )
 
 if(WIN32)

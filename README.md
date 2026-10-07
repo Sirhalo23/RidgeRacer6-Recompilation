@@ -40,9 +40,13 @@ There are test builds for desktop Linux and for the Steam Deck, as
 (marked as pre-releases). They hold the same program, drawn with Vulkan; the
 Steam Deck one comes with settings and instructions for the Deck.
 
-They have been run from start to finish only on a machine without a graphics
-card, with software rendering. Nobody has played them at full speed yet, so
-expect problems, and please report what you find.
+They are experimental. Test build 02 was tried once on a Steam Deck: it
+started, but drew the track black, which test build 03 fixes. Build 03 itself
+has only been run on a machine without a graphics card, with software
+rendering, so expect problems, and please report what you find.
+
+On a Steam Deck, add the game to Steam and start it from there: only then do
+the Deck's buttons work as a controller.
 
 1. Unpack the archive in your home folder.
 2. Start `ridge-racer-6.sh`. The first time, it asks for your Ridge Racer 6
@@ -135,8 +139,9 @@ next to the launcher (on Linux, next to `ridge-racer-6.sh`).
 - Keyboard steering is all-or-nothing; a controller is the better way to play.
 - Without a sound output device the game closes right after starting (the
   launcher warns about this).
-- The Linux and Steam Deck builds have not been run on real graphics hardware
-  yet, and have no settings window: settings are a text file.
+- The Linux and Steam Deck builds have hardly been run on real graphics
+  hardware, and have no settings window: settings are a text file. Distant
+  textures are slightly softer there than on Windows.
 
 ## Building it yourself
 
