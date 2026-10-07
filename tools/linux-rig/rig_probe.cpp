@@ -62,5 +62,46 @@ static void MaybeUnlock() {
   }
 }
 
-REX_HOOK_RAW(sub_8225DA08) { MaybeUnlock(); Probe(ctx, base); __imp__sub_8225DA08(ctx, base); }
+// Rig only: goes through the game's own way of awarding achievement 1 ("360!")
+// without driving: marks it earned in the game's achievement manager
+// (sub_82129818), runs the game's "write what was earned" step (sub_82129868,
+// normally reached in the sequence after a race) and then its completion poll
+// (sub_82129960). Shows whether the game's request reaches the SDK.
+REXCVAR_DEFINE_INT32(rig_game_award_after, 0, "RR6", "Rig: seconds before the game is made to award achievement 1 through its own code (0 = off).");
+static void MaybeGameAward(PPCContext& ctx, uint8_t* base) {
+  static const auto start = std::chrono::steady_clock::now();
+  static int stage = 0;
+  static std::chrono::steady_clock::time_point at;
+  constexpr uint32_t kManager = 0x824939A0;
+  const int after = REXCVAR_GET(rig_game_award_after);
+  if (after <= 0) return;
+  const auto now = std::chrono::steady_clock::now();
+  if (stage == 0 && now - start > std::chrono::seconds(after)) {
+    stage = 1;
+    at = now;
+    const int8_t user = static_cast<int8_t>(REX_LOAD_U8(0x823B0C2C + 8));
+    const uint32_t remap = REX_LOAD_U32(0x823B0C2C + 148);
+    REXLOG_INFO("[rigprobe] game award: user index byte {}, remap flag {}, record 0: earned {} written {}", int(user), remap,
+                REX_LOAD_U8(kManager + 16), REX_LOAD_U8(kManager + 17));
+    PPCContext c = ctx;
+    c.r3.u64 = kManager;
+    c.r4.u64 = 0;
+    sub_82129818(c, base);
+    REXLOG_INFO("[rigprobe] game award: after mark, record 0: earned {} written {}", REX_LOAD_U8(kManager + 16), REX_LOAD_U8(kManager + 17));
+    c = ctx;
+    c.r3.u64 = kManager;
+    sub_82129868(c, base);
+    REXLOG_INFO("[rigprobe] game award: the game's write step returned {} (achievements it tried to write); request state {}", c.r3.u32,
+                REX_LOAD_U32(0x82493F40 + 40));
+  } else if (stage >= 1 && stage < 6 && now - at > std::chrono::seconds(2 * stage)) {
+    ++stage;
+    PPCContext c = ctx;
+    c.r3.u64 = kManager;
+    sub_82129960(c, base);
+    REXLOG_INFO("[rigprobe] game award: completion poll returned {}; request state {}, result {:#x}", c.r3.u32, REX_LOAD_U32(0x82493F40 + 40),
+                REX_LOAD_U32(0x82493F40 + 36));
+  }
+}
+
+REX_HOOK_RAW(sub_8225DA08) { MaybeUnlock(); MaybeGameAward(ctx, base); Probe(ctx, base); __imp__sub_8225DA08(ctx, base); }
 REX_HOOK_RAW(sub_8225D278) { Probe(ctx, base); __imp__sub_8225D278(ctx, base); }

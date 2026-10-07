@@ -169,7 +169,7 @@ The game has 36 achievements, 1000 gamerscore. The SDK already did most of
 the work: it reads names, descriptions and icons out of the game's program
 file (the title resource at 0x82560000), has a handler that records an unlock
 when the game writes one (the game imports XMsgStartIORequest, the call such a
-write goes through; this has not been seen happening yet), and keeps unlocks
+write goes through; see "When the game awards" below), and keeps unlocks
 in `<user data>\achievements\4E4D07D3.toml`. It also had a pop-up and a list
 window (F7) of its own. Ours replace both (`CreateAchievementsOverlay` returns
 nothing, `CreateAchievementNotificationDialog` returns ours):
@@ -214,9 +214,26 @@ through the SDK (a rig-only switch in `rig_probe.cpp`), the unlock file, the
 list by F7 and by Esc then Y, scrolling by keys and by the stick, closing with
 B without the game seeing it, the sound (recorded from the rig's sound output:
 the chime's three notes are in it), the files for the launcher. Launcher page:
-under Wine, with the rig's files. **Not yet seen:** the game itself awarding
-an achievement in this build (nobody has earned one), and all of it on
-Windows.
+under Wine, with the rig's files. **Not yet seen:** an achievement earned by
+playing, and all of it on Windows.
+
+**When the game awards.** Not at the moment something is done, but in the
+save sequence after a race. For "360!": the race update (sub_820F1E88) sets
+bit 4 of the player's flags (+740) once the car's spin counter (+652) is not
+zero; the code that closes a race (sub_821F5910, sub_821F2BC0, and the result
+evaluators sub_821F1230 and sub_821A5970) then marks achievement index 0 as
+earned in the achievement manager at 0x824939A0 (sub_82129818: 36 records of
+20 bytes, byte 16 = earned, byte 17 = written); and state 20 of the save
+sequence (sub_8218A4D8) calls sub_82129868, which sends one
+`XUserWriteAchievements` request (XMsg 0x000B0008, through sub_8222C638) per
+earned record, for the user index kept at 0x823B0C34. A race that is left
+before the finish therefore gives nothing, as on the console. First report
+from Windows (2026-10-07): a 360 spin, no pop-up; the log of that session has
+no save after the race and no `XGIUserWriteAchievements` line, so the race
+was not finished. The path from the manager on was then run on the rig
+(`rig_game_award_after` in `rig_probe.cpp` marks index 0 and calls the write
+step): user index 0, the SDK logged `XGIUserWriteAchievements: id=1` and
+"Achievement unlocked", the request completed with result 0.
 
 ## Display settings
 
