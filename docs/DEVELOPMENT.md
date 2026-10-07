@@ -391,6 +391,12 @@ checked and screenshotted. What it needs:
   between two input polls.
 - Do not lower the priority of the game's threads to speed up rendering: the
   loader thread starves and loading screens never finish.
+- Once the save has loaded, the main menu draws a 3D scene behind itself and
+  the rig drops to a frame every 4 to 16 seconds. A key held for one such
+  frame can count as two presses, and a screenshot taken a few seconds later
+  still shows the old state. `tools/linux-rig/p1.sh` releases the key the
+  moment the log shows it and waits 40 s before the screenshot;
+  `torace4.sh` does the way from "Single Race" to a race like that.
 
 Linux and Windows differ in the graphics backend (Vulkan vs Direct3D 12), so
 the rig says nothing about D3D12-specific behaviour such as the pipeline cache.
@@ -618,12 +624,62 @@ a folder. Never published: `generated\default`, `analysis\default.bin`,
 `..\game`, `..\sdk`, `..\dist`, `logs` (they contain the Windows user name) and
 any executable.
 
+## Our fork of the SDK (started 2026-10-07)
+
+[Sirhalo23/rexglue-sdk](https://github.com/Sirhalo23/rexglue-sdk) is a fork
+of the ReXGlue SDK (BSD 3-clause, so changing and redistributing it is
+allowed with the notices kept). Two reasons for it: fixes in the SDK itself
+instead of workarounds in `src/` (`SDK-NOTES.md` is the list to work from),
+and runtime files built by us rather than taken from the SDK's download.
+
+- Branch `rr6` is upstream's `v0.10.0` plus our changes; `FORK.md` there
+  lists them. `main`, `development` and `release/*` are upstream's and stay
+  untouched. Upstream's `development` was 24 commits past v0.10.0 on
+  2026-10-07 (input, window and build changes; the Vulkan fault of
+  `SDK-NOTES.md` 7 is still in it).
+- Packages are built by the fork's own workflows (they came with the fork):
+  a tag `v*` builds every platform and attaches the zips to the release of
+  that tag. Our tags are `v0.10.0.100`, `.101`, ...: the SDK's version code
+  only accepts numeric tags, and the fourth number keeps ours apart from
+  upstream's. The nightly workflow is disabled in the fork.
+- This session can push branches to the fork but not tags or releases
+  (HTTP 403), so a release is made in the GitHub page: "Draft a new
+  release", new tag, target `rr6`.
+- First change: the Vulkan exponent-bias fix (`SDK-NOTES.md`, 7). With it,
+  `src/lod_bias_fix.cpp` is not needed; it stays until a package built
+  against the fork's SDK has been run on real hardware.
+
+Building the SDK from source on Linux (Ubuntu 24.04), as done on the rig:
+
+    git clone https://github.com/Sirhalo23/rexglue-sdk && cd rexglue-sdk
+    git checkout rr6 && git submodule update --init --recursive --depth 1
+    apt-get install clang-20 lld-20 cmake ninja-build autoconf libgtk-3-dev \
+        libx11-xcb-dev libxss-dev libvulkan-dev libwayland-dev libwayland-bin \
+        wayland-protocols libxkbcommon-dev libdecor-0-dev libasound2-dev \
+        libpulse-dev libpipewire-0.3-dev libxext-dev libxrandr-dev \
+        libxcursor-dev libxi-dev libxfixes-dev libxtst-dev
+    cmake --preset linux-amd64 -DCMAKE_C_COMPILER=clang-20 \
+        -DCMAKE_CXX_COMPILER=clang++-20 -DCMAKE_CONFIGURATION_TYPES=Release \
+        -DCMAKE_DEFAULT_BUILD_TYPE=Release -DCMAKE_CROSS_CONFIGS= -DCMAKE_DEFAULT_CONFIGS=
+    ninja -C out/build/linux-amd64 rexgpu-xenos     # builds rexruntime as well
+
+Clang 18 does not do: with GCC 13's standard library it has no
+`std::expected`, which the SDK uses. The build is 843 steps and took about
+8 minutes on two cores. The results are `out/linux-amd64/Release/
+librexruntime.so` and `librexgpu-xenos.so`.
+
+Trying a rebuilt runtime with an existing game build needs no relinking: put
+the two files in a folder that comes first in `LD_LIBRARY_PATH`, and replace
+the copy of `librexgpu-xenos.so` next to the game program (the plugin is
+loaded from there). `/proc/<pid>/maps` shows which files were really loaded.
+
 ## Next steps
 
 1. Hand out build 03 and collect reports (other GPUs, long sessions).
 2. The rest of the checklist: save and reload, keyboard, PlayStation pad.
 3. Wider play-testing: all tracks, videos, long sessions, other GPUs.
-4. Report the SDK findings upstream (`SDK-NOTES.md`).
+4. Report the SDK findings upstream (`SDK-NOTES.md`), and fix them in our
+   fork as they come up; the Vulkan texture fix is the first.
 5. Get the Linux packages run on real hardware: a desktop with a graphics card
    and a Steam Deck. First things to learn: does it start, at what speed, and
    does anything look wrong under a real Vulkan driver.
