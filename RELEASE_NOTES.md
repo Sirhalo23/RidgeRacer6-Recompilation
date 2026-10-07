@@ -5,16 +5,24 @@ code-signed and a new file has no download history. The README says what to
 do: [If Windows warns about the download](README.md#if-windows-warns-about-the-download).
 Each release page has the zip's SHA-256 in `SHA256SUMS.txt`.
 
-## Not yet released
+## v0.1.2 (2026-10-07)
 
-In the source, not yet in a Windows release zip (in Linux test builds 02 and
-03):
+Inside the zip it calls itself "test build 06". The first public Windows
+release since v0.1.0: v0.1.1 was prepared but not published, and what it
+added is in here.
 
-- Achievements: a new pop-up with a sound, a list that works with a controller
-  (Y from the quit question, or F7), a marker on the 15 that need Xbox Live,
-  and an Achievements page in the launcher.
-- Linux: the start script clears memory left behind by a game that was stopped
-  hard.
+- Achievements: the game's 36, with a pop-up and a chime when one is earned
+  (after the race, with the save, as the game itself does it), a list in the
+  game that works with a controller (F7, or Y from the quit question), a marker
+  on the 15 that need Xbox Live, and an Achievements page in the launcher. On
+  Linux since test build 02.
+- The quit question of v0.1.1 (below).
+- The README inside the zip says how to unblock the zip so that Windows does
+  not ask about each program.
+
+On Windows so far: "360!" was earned, the launcher's page shows the list, and
+the game starts and quits through the quit question. The new pop-up and its
+chime have been seen on the Linux build only.
 
 ## Linux test build 03 (2026-10-07)
 

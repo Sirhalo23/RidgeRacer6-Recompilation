@@ -214,8 +214,18 @@ through the SDK (a rig-only switch in `rig_probe.cpp`), the unlock file, the
 list by F7 and by Esc then Y, scrolling by keys and by the stick, closing with
 B without the game seeing it, the sound (recorded from the rig's sound output:
 the chime's three notes are in it), the files for the launcher. Launcher page:
-under Wine, with the rig's files. **Not yet seen:** an achievement earned by
-playing, and all of it on Windows.
+under Wine, with the rig's files.
+
+On Windows (2026-10-07): "360!" was earned by playing (with the executable
+of test build 05, so with the SDK's own pop-up; `XGIUserWriteAchievements:
+id=1` in `logs\run.log`). The achievements code itself was first built on
+Windows later that morning; the build before had failed on a local variable
+named `small`, a macro in the Windows headers (`tools/check_windows_names.py`
+now looks for such names, and the workflow runs it). With that build: the
+icons and the list were written, the launcher's Achievements page showed
+them, the game quit through the quit question. **Not yet seen on Windows:**
+the new pop-up with its chime, and the list in the game. Test build 06 /
+v0.1.2 is this build.
 
 **When the game awards.** Not at the moment something is done, but in the
 save sequence after a race. For "360!": the race update (sub_820F1E88) sets
