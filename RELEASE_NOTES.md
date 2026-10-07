@@ -1,5 +1,15 @@
 # Release notes
 
+## Not yet released
+
+In the source, not yet in a Windows release zip (in Linux test build 02):
+
+- Achievements: a new pop-up with a sound, a list that works with a controller
+  (Y from the quit question, or F7), a marker on the 15 that need Xbox Live,
+  and an Achievements page in the launcher.
+- Linux: the start script clears memory left behind by a game that was stopped
+  hard.
+
 ## v0.1.1 (2026-10-06)
 
 Inside the zip it calls itself "test build 05".

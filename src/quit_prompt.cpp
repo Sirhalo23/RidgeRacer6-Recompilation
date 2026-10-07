@@ -1,41 +1,30 @@
 // Leaving the game: Esc, or Back + Start held for a second, asks "Quit Ridge
 // Racer 6?".
 //
-// The game is a console game and has no way out of its own; until now the only
-// ways were Alt+F4 and the window's close button, and a full-screen window has
-// no close button. Both still work, and still close at once.
+// The game is a console game and has no way out of its own; before this the
+// only ways were Alt+F4 and the window's close button, and a full-screen
+// window has no close button. Both still work, and still close at once.
 //
-//   keyboard    Esc asks; Enter quits, Esc again goes back to the game.
+//   keyboard    Esc asks; Enter quits, Esc again goes back to the game, Y (or
+//               the achievements key) opens the achievements list.
 //   controller  Back + Start held for a second asks (Create/Share + Options on
-//               a PlayStation pad); A quits, B goes back.
-//   mouse       the two buttons can be clicked.
+//               a PlayStation pad, View + Menu on a Steam Deck); A quits, B
+//               goes back, Y opens the achievements list.
+//   mouse       the buttons can be clicked.
 //
 // The question is drawn by the SDK's overlay (ImGui), like its F3 and F4
 // windows. The game goes on running behind it, and a question nobody answers
-// for half a minute goes away again. While it is up, and until the
-// buttons that answered it have been let go, the game is given an idle
-// controller, so that "B: keep playing" is not also a "cancel" in the menu
-// underneath. Keys count as well: the SDK turns them into controller buttons
-// before the game reads them, so Space (A) and Backspace (B) answer too.
+// for half a minute goes away again. Input comes through overlay_input.cpp,
+// which also keeps it from the game meanwhile.
 //
 // Quitting asks the window to close, which is what Alt+F4 does; nothing new
 // happens to the game on the way out.
 //
-// The keys are read by a listener of our own, ahead of the overlay and of the
-// SDK's key bindings, because both of those take the repeats of a held key
-// for new presses: Esc held a moment too long would ask and take the question
-// away again, and Enter held as "Start" while the question appears would
-// answer it.
-//
-// rr6_quit_prompt = false turns all of this off. rr6_quit_key names the key.
+// rr6_quit_prompt = false turns the question off. rr6_quit_key names the key.
 
 #include "quit_prompt.h"
 
-#include <atomic>
 #include <chrono>
-#include <cstddef>
-#include <mutex>
-#include <string>
 
 #include <imgui.h>
 
@@ -44,25 +33,20 @@
 #include <rex/ui/imgui_dialog.h>
 #include <rex/ui/imgui_drawer.h>
 #include <rex/ui/keybinds.h>
-#include <rex/ui/ui_event.h>
-#include <rex/ui/virtual_key.h>
 #include <rex/ui/window.h>
-#include <rex/ui/window_listener.h>
-#include <rex/ui/windowed_app_context.h>
+
+#include "achievements.h"
+#include "overlay_input.h"
 
 REXCVAR_DEFINE_BOOL(rr6_quit_prompt, true, "RR6",
                     "Esc, or Back + Start held for a second, asks whether to quit the game.");
 
-REXCVAR_DEFINE_STRING(rr6_quit_key, "Escape", "RR6",
-                      "The key that asks whether to quit the game, named as in the key bindings "
-                      "(for example Escape or F10).");
+REXCVAR_DECLARE(std::string, rr6_quit_key);
+REXCVAR_DECLARE(std::string, rr6_achievements_key);
 
 namespace rr6 {
 namespace {
 
-constexpr uint32_t kStart = 0x0010, kBack = 0x0020, kA = 0x1000, kB = 0x2000;
-constexpr int64_t kHoldMs = 1000;   // how long Back + Start must be held
-constexpr int64_t kSettleMs = 300;  // answers are ignored for this long after the question appears
 constexpr int64_t kGiveUpMs = 30000;  // an unanswered question goes away by itself
 
 int64_t NowMs() {
@@ -71,47 +55,53 @@ int64_t NowMs() {
       .count();
 }
 
-// Shared between the UI thread (the question) and the game thread (the pad).
-constexpr int kQuit = 1, kGoBack = 2;
-std::atomic<bool> g_open{false};
-std::atomic<int64_t> g_opened_ms{0};
-std::atomic<int> g_answer{0};  // kQuit or kGoBack, from a key or a controller button
-
-// Nothing answers the question in its first moments, so that a button the
-// player was pressing for the game does not.
-bool Settled() { return NowMs() - g_opened_ms.load() >= kSettleMs; }
-
 // UI thread only.
 class QuitDialog;
 rex::ui::ImGuiDrawer* g_drawer = nullptr;
-rex::ui::Window* g_window = nullptr;
-rex::ui::WindowedAppContext* g_context = nullptr;
 QuitDialog* g_dialog = nullptr;
 
 class QuitDialog : public rex::ui::ImGuiDialog {
  public:
   explicit QuitDialog(rex::ui::ImGuiDrawer* drawer) : rex::ui::ImGuiDialog(drawer) {
-    g_answer = 0;
-    g_opened_ms = NowMs();
-    g_open = true;
+    opened_ms_ = NowMs();
+    OverlayOpened();
   }
   ~QuitDialog() override {
-    g_open = false;
+    OverlayClosed();
     g_dialog = nullptr;
   }
 
  protected:
   void OnDraw(ImGuiIO& io) override {
-    // Answers from the keyboard and the controller arrive through g_answer;
-    // the two buttons below can also be clicked.
-    const bool settled = Settled();
-    const int answer = g_answer.exchange(0);
-    bool quit = false;
-    if (!quitting_) {
-      quit = answer == kQuit;
-      // Left unanswered, the question goes away: nobody is left looking at it
-      // with no way to answer (a controller the question cannot hear, say).
-      go_back_ = go_back_ || answer == kGoBack || NowMs() - g_opened_ms.load() >= kGiveUpMs;
+    // Answers from the keyboard and the controller; the buttons below can
+    // also be clicked. Nothing answers in the first moments.
+    const bool settled = OverlayInputSettled();
+    const uint32_t buttons = TakePadPresses();
+    bool quit = false, go_back = false, achievements = false;
+    if (settled) {
+      quit = (buttons & pad::kA) != 0;
+      go_back = (buttons & pad::kB) != 0;
+      achievements = (buttons & pad::kY) != 0;
+    }
+    const rex::ui::VirtualKey quit_key = rex::ui::ParseVirtualKey(REXCVAR_GET(rr6_quit_key));
+    const rex::ui::VirtualKey list_key =
+        rex::ui::ParseVirtualKey(REXCVAR_GET(rr6_achievements_key));
+    for (const KeyPress& press : TakeKeyPresses()) {
+      if (press.repeat || !settled) {
+        continue;
+      }
+      if (press.key == quit_key) {
+        go_back = true;
+      } else if (press.key == rex::ui::VirtualKey::kReturn) {
+        quit = true;
+      } else if (press.key == list_key || press.key == rex::ui::VirtualKey::kY) {
+        achievements = true;
+      }
+    }
+    // Left unanswered, the question goes away: nobody is left looking at it
+    // with no way to answer.
+    if (NowMs() - opened_ms_ >= kGiveUpMs) {
+      go_back = true;
     }
 
     // Sizes are given for a picture 720 lines high and grow with the window.
@@ -121,6 +111,8 @@ class QuitDialog : public rex::ui::ImGuiDialog {
     const ImVec4 lime_hot(0.816f, 0.980f, 0.345f, 1.0f);
     const ImVec4 ink(0.086f, 0.098f, 0.114f, 1.0f);
     const ImVec4 quiet(0.62f, 0.66f, 0.68f, 1.0f);
+    const ImVec4 grey(0.20f, 0.23f, 0.26f, 1.0f);
+    const ImVec4 grey_hot(0.27f, 0.31f, 0.34f, 1.0f);
 
     ImGui::GetBackgroundDrawList()->AddRectFilled(ImVec2(0, 0), screen, IM_COL32(8, 10, 12, 165));
 
@@ -170,15 +162,27 @@ class QuitDialog : public rex::ui::ImGuiDialog {
 
       ImGui::SameLine();
       ImGui::BeginGroup();
-      ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.20f, 0.23f, 0.26f, 1.0f));
-      ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.27f, 0.31f, 0.34f, 1.0f));
-      ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.27f, 0.31f, 0.34f, 1.0f));
+      ImGui::PushStyleColor(ImGuiCol_Button, grey);
+      ImGui::PushStyleColor(ImGuiCol_ButtonHovered, grey_hot);
+      ImGui::PushStyleColor(ImGuiCol_ButtonActive, grey_hot);
       if (ImGui::Button("Keep playing", ImVec2(width, 0)) && settled) {
-        go_back_ = true;
+        go_back = true;
       }
       ImGui::PopStyleColor(3);
       Hint("Esc, or B on a controller", quiet, 15 * u);
       ImGui::EndGroup();
+
+      // A second row: the achievements list, which is also the only way to it
+      // without a keyboard.
+      ImGui::Dummy(ImVec2(1, 4 * u));
+      ImGui::PushStyleColor(ImGuiCol_Button, grey);
+      ImGui::PushStyleColor(ImGuiCol_ButtonHovered, grey_hot);
+      ImGui::PushStyleColor(ImGuiCol_ButtonActive, grey_hot);
+      if (ImGui::Button("Achievements", ImVec2(width * 2 + 16 * u, 0)) && settled) {
+        achievements = true;
+      }
+      ImGui::PopStyleColor(3);
+      Hint("Y on the keyboard or a controller", quiet, 15 * u);
       ImGui::EndDisabled();
       ImGui::PopFont();
     }
@@ -186,20 +190,25 @@ class QuitDialog : public rex::ui::ImGuiDialog {
     ImGui::PopStyleColor(2);
     ImGui::PopStyleVar(7);
 
-    if (quit && !quitting_) {
+    if (quitting_) {
+      return;
+    }
+    if (quit) {
       quitting_ = true;
       REXLOG_INFO("[quit] the player chose to quit; closing the window");
       // Not from inside the drawing: closing can destroy the window.
-      if (g_context) {
-        g_context->CallInUIThreadDeferred([] {
-          if (g_window) {
-            g_window->RequestClose();
-          }
-        });
-      }
-    } else if (go_back_ && !quitting_) {
-      REXLOG_INFO("[quit] back to the game");
+      RunOnUiThreadLater([] {
+        if (rex::ui::Window* window = OverlayWindow()) {
+          window->RequestClose();
+        }
+      });
+    } else if (achievements) {
+      REXLOG_INFO("[quit] on to the achievements list");
+      ShowAchievementList();
       Close();  // deletes this dialog once the drawing is over
+    } else if (go_back) {
+      REXLOG_INFO("[quit] back to the game");
+      Close();
     }
   }
 
@@ -212,124 +221,30 @@ class QuitDialog : public rex::ui::ImGuiDialog {
     ImGui::PopFont();
   }
 
-  bool go_back_ = false;
+  int64_t opened_ms_ = 0;
   bool quitting_ = false;
 };
 
 void Ask() {
-  if (!g_drawer || g_dialog || !REXCVAR_GET(rr6_quit_prompt)) {
+  if (!g_drawer || g_dialog || AnyOverlayOpen() || !REXCVAR_GET(rr6_quit_prompt)) {
     return;
   }
   g_dialog = new QuitDialog(g_drawer);
   REXLOG_INFO("[quit] asking whether to quit");
 }
 
-// The keyboard. A key counts as pressed when it goes down after having been
-// up; the repeats a held key sends (marked by the window as "was already
-// down") do not count.
-class QuitKeys : public rex::ui::WindowInputListener {
- public:
-  void OnKeyDown(rex::ui::KeyEvent& e) override {
-    if (!REXCVAR_GET(rr6_quit_prompt)) {
-      return;
-    }
-    const rex::ui::VirtualKey key = e.virtual_key();
-    const bool pressed = !e.prev_state();
-    const bool open = g_dialog != nullptr;
-    if (key == rex::ui::ParseVirtualKey(REXCVAR_GET(rr6_quit_key))) {
-      if (pressed && !open) {
-        Ask();
-      } else if (pressed && Settled()) {
-        g_answer = kGoBack;
-      }
-      e.set_handled(true);
-    } else if (key == rex::ui::VirtualKey::kReturn && open) {
-      if (pressed && Settled()) {
-        g_answer = kQuit;
-      }
-      e.set_handled(true);
-    }
-  }
-};
-QuitKeys g_keys;
-
-struct Pad {
-  uint32_t previous = 0;
-  int64_t held_since = 0;  // when Back + Start went down together; 0 = they are not
-  bool asked = false;      // this hold has already asked
-  bool hidden = false;     // the game is not shown this pad until its buttons are let go
-};
-std::mutex g_pad_mutex;
-Pad g_pads[4];
-
 }  // namespace
 
-void InstallQuitPrompt(rex::ui::ImGuiDrawer* drawer, rex::ui::Window* window,
-                       rex::ui::WindowedAppContext* context) {
+void InstallQuitPrompt(rex::ui::ImGuiDrawer* drawer) {
   g_drawer = drawer;
-  g_window = window;
-  g_context = context;
-  if (window) {
-    window->AddInputListener(&g_keys, SIZE_MAX);  // ahead of every other listener
-  }
+  SetMenuRequestHandler([] { Ask(); });
 }
 
 void RemoveQuitPrompt() {
-  if (g_window) {
-    g_window->RemoveInputListener(&g_keys);
-  }
   if (g_dialog) {
     delete g_dialog;
   }
   g_drawer = nullptr;
-  g_window = nullptr;
-  g_open = false;
-}
-
-bool QuitPromptSeesPad(uint32_t user, uint32_t buttons) {
-  if (user >= 4 || !REXCVAR_GET(rr6_quit_prompt)) {
-    return false;
-  }
-  std::lock_guard<std::mutex> lock(g_pad_mutex);
-  Pad& pad = g_pads[user];
-  const uint32_t pressed = buttons & ~pad.previous;
-  pad.previous = buttons;
-  const int64_t now = NowMs();
-
-  if (g_open.load()) {
-    pad.hidden = true;
-    pad.held_since = 0;
-    if (Settled()) {
-      if (pressed & kA) {
-        g_answer = kQuit;
-      } else if (pressed & kB) {
-        g_answer = kGoBack;
-      }
-    }
-    return true;
-  }
-
-  if (pad.hidden) {
-    if (buttons != 0) {
-      return true;
-    }
-    pad.hidden = false;
-  }
-
-  if ((buttons & (kBack | kStart)) == (kBack | kStart)) {
-    if (pad.held_since == 0) {
-      pad.held_since = now;
-      pad.asked = false;
-    } else if (!pad.asked && now - pad.held_since >= kHoldMs) {
-      pad.asked = true;
-      if (g_context) {
-        g_context->CallInUIThread([] { Ask(); });
-      }
-    }
-  } else {
-    pad.held_since = 0;
-  }
-  return false;
 }
 
 }  // namespace rr6

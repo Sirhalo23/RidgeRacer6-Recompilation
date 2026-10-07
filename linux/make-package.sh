@@ -23,7 +23,7 @@ WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
 for f in "$BUILD/rr6_recomp" "$SDK/lib/librexruntime.so" "$SDK/lib/librexgpu-xenos.so" launcher/rr6-extract \
-         gamecontrollerdb.txt linux/ridge-racer-6.sh linux/collect-report.sh linux/README.txt linux/README-steamdeck.txt; do
+         gamecontrollerdb.txt assets/achievement.wav linux/ridge-racer-6.sh linux/collect-report.sh linux/README.txt linux/README-steamdeck.txt; do
   [ -f "$f" ] || { echo "Missing: $f (run build-linux.sh first)"; exit 1; }
 done
 
@@ -42,6 +42,8 @@ assemble() {  # assemble <folder name> <readme> <kind text> [deck]
   strip "$dir/bin/rr6_recomp"
   install -m 755 "$SDK/lib/librexruntime.so" "$SDK/lib/librexgpu-xenos.so" launcher/rr6-extract "$dir/bin/"
   install -m 644 gamecontrollerdb.txt "$dir/bin/"
+  mkdir -p "$dir/bin/sounds"
+  install -m 644 assets/achievement.wav "$dir/bin/sounds/achievement.wav"
   install -m 644 package/licenses/ReXGlue-SDK-LICENSE.txt package/licenses/SDL3-LICENSE.txt \
     package/licenses/SDL_GameControllerDB-LICENSE.txt "$dir/licenses/"
   {

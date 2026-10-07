@@ -163,6 +163,61 @@ both answers, mouse, clean exit). Built on Windows on 2026-10-06 (17:18) and
 tried there the same day: Esc brought the question up and quit the game, and
 so did the Back + Start hold on an Xbox controller.
 
+## Achievements (`src/achievements.cpp`, `src/unlock_sound.cpp`, `src/overlay_input.cpp`)
+
+The game has 36 achievements, 1000 gamerscore. The SDK already did most of
+the work: it reads names, descriptions and icons out of the game's program
+file (the title resource at 0x82560000), has a handler that records an unlock
+when the game writes one (the game imports XMsgStartIORequest, the call such a
+write goes through; this has not been seen happening yet), and keeps unlocks
+in `<user data>\achievements\4E4D07D3.toml`. It also had a pop-up and a list
+window (F7) of its own. Ours replace both (`CreateAchievementsOverlay` returns
+nothing, `CreateAchievementNotificationDialog` returns ours):
+
+- **Pop-up:** bottom centre, the icon in a circle, "Achievement unlocked",
+  gamerscore and name, about five seconds. With it a sound: `achievement.wav`
+  next to the launcher or next to the program if the player put one there,
+  otherwise `sounds\achievement.wav`, an original chime
+  (`tools/make_chime.py`, copied next to the program by the build). Windows
+  plays it with `PlaySound`, Linux through the SDL inside the SDK's runtime
+  library (on Windows the runtime does not export SDL). The Xbox 360's own
+  unlock sound is not shipped; a player who wants it supplies the file.
+- **List:** F7 (`rr6_achievements_key`), or Y from the quit question, which is
+  the way to it with a controller. Scrolls with D-pad, stick, arrow and page
+  keys, mouse wheel; B or Esc closes. Secret achievements (those the game's
+  data does not flag as "show when locked") say nothing until unlocked.
+- **Online only:** 15 need Xbox Live play: International Match, the 50 / 100 /
+  200 online victories, the five Messages from Reiko, the five machine
+  collections and All Machines (435 gamerscore). That list is from players'
+  guides (the Japanese achievement wiki gives the number of online battles
+  each collection needs; a second guide agrees on the messages), not from the
+  game's data. They are shown apart and progress is counted against the other
+  21 (565). Nothing prevents one from unlocking.
+- **For the launcher:** at start-up and on every unlock the game writes
+  `<user data>\achievements\list.txt` (one tab-separated line each: id,
+  gamerscore, online only, secret, unlock time, image, name, both
+  descriptions) and the icons as PNG files (`icons\<image id>.png`, copied out
+  of the game's program in memory). The launcher's Achievements page reads
+  those; until the game has run once it says so. It also has a button that
+  plays the sound.
+- **Input** for the list and the quit question is shared
+  (`overlay_input.cpp`): one keyboard listener ahead of the SDK's, and the
+  controller as the game reads it. Controller answers therefore only arrive
+  while the game is reading the controller, which it does not do during some
+  loading screens.
+- `rr6_preview_achievement = N` shows the pop-up for achievement N a few
+  seconds after start without unlocking anything; `rr6_achievement_sound =
+  false` silences it.
+
+Checked on the Linux rig: the pop-up by preview and by a real unlock made
+through the SDK (a rig-only switch in `rig_probe.cpp`), the unlock file, the
+list by F7 and by Esc then Y, scrolling by keys and by the stick, closing with
+B without the game seeing it, the sound (recorded from the rig's sound output:
+the chime's three notes are in it), the files for the launcher. Launcher page:
+under Wine, with the rig's files. **Not yet seen:** the game itself awarding
+an achievement in this build (nobody has earned one), and all of it on
+Windows.
+
 ## Display settings
 
 The game stays at its native 60 fps (its speed is tied to the display tick).
@@ -271,8 +326,8 @@ Still to confirm on Windows: progress survives a restart; saving after a race.
   exceptions there (crash 2: float inexact result in the audio mixer).
 - `fp_guard.cpp`: safety net for the same problem elsewhere; logs to
   `logs\fp-guard.txt`.
-- `save_fixes.cpp`, `widescreen.cpp`, `input_fixes.cpp`, `quit_prompt.cpp`: see
-  above.
+- `save_fixes.cpp`, `widescreen.cpp`, `input_fixes.cpp`, `quit_prompt.cpp`,
+  `overlay_input.cpp`, `achievements.cpp`, `unlock_sound.cpp`: see above.
 - `depth_bias_fix.cpp`: rounds the slope-scaled depth bias so that Direct3D 12
   does not build a new pipeline for every draw (see "Known issues").
 
@@ -445,6 +500,9 @@ the copy the Windows side made.
 - starts the game through X11 (`SDL_VIDEO_DRIVER=x11`; `--wayland` leaves the
   choice to SDL, untested), and without Steam's library folders if the library
   check only passes without them;
+- removes `/dev/shm/xenia_memory_*` when no game is running, before and after
+  a run: a game that is killed leaves its guest memory there (several hundred
+  MB of memory each time, until the next restart);
 - watches the log while the game runs. On Linux a fault in the game's own code
   does not end the program: the SDK logs "Unhandled guest access violation"
   and the same fault repeats without end, at full processor load, with a

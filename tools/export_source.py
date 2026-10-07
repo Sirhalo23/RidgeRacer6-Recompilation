@@ -32,6 +32,7 @@ INCLUDE = [
     ('rr6-recomp/generated', 'generated', ['rexglue.cmake'], False),
     ('rr6-recomp/src', 'src', ['*.cpp', '*.h'], True),
     ('rr6-recomp/config', 'config', ['*.toml'], True),
+    ('rr6-recomp/assets', 'assets', ['*.wav'], False),
     ('rr6-recomp/launcher', 'launcher', ['*.cpp', '*.c', '*.h', '*.rc', '*.manifest', '*.ico', '*.sh',
                                          '*.txt'], True),
     ('rr6-recomp/package', 'package', ['*'], True),

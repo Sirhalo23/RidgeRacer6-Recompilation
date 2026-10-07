@@ -6,9 +6,11 @@
 #include <mutex>
 #include <unordered_set>
 
+#include <rex/cvar.h>
 #include <rex/hook.h>
 #include <rex/logging.h>
 #include <rex/ppc/context.h>
+#include <rex/system/achievements.h>
 
 #include "generated/default/rr6_recomp_init.h"
 
@@ -45,5 +47,20 @@ void Probe(PPCContext& ctx, uint8_t* base) {
 }
 }  // namespace
 
-REX_HOOK_RAW(sub_8225DA08) { Probe(ctx, base); __imp__sub_8225DA08(ctx, base); }
+// Rig only: unlocks an achievement some seconds after start, to see the pop-up
+// and what gets saved without having to earn one at one frame a second.
+REXCVAR_DEFINE_INT32(rig_unlock_achievement, 0, "RR6", "Rig: unlock this achievement after rig_unlock_after seconds.");
+REXCVAR_DEFINE_INT32(rig_unlock_after, 40, "RR6", "Rig: seconds before rig_unlock_achievement.");
+static void MaybeUnlock() {
+  static const auto start = std::chrono::steady_clock::now();
+  static bool done = false;
+  if (!done && REXCVAR_GET(rig_unlock_achievement) > 0 &&
+      std::chrono::steady_clock::now() - start > std::chrono::seconds(REXCVAR_GET(rig_unlock_after))) {
+    done = true;
+    const bool first = rex::system::UnlockAchievement(static_cast<uint32_t>(REXCVAR_GET(rig_unlock_achievement)));
+    REXLOG_INFO("[rigprobe] unlock achievement {}: first time {}", REXCVAR_GET(rig_unlock_achievement), first);
+  }
+}
+
+REX_HOOK_RAW(sub_8225DA08) { MaybeUnlock(); Probe(ctx, base); __imp__sub_8225DA08(ctx, base); }
 REX_HOOK_RAW(sub_8225D278) { Probe(ctx, base); __imp__sub_8225D278(ctx, base); }

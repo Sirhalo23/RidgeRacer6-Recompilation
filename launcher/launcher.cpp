@@ -4,6 +4,7 @@
 // lets a player choose display and control settings, writes them to the game's
 // settings file (rr6_recomp.toml, next to the game executable) and starts the
 // game. The game reads that file itself; nothing here is required to play.
+// A fourth page shows the player's achievements, from what the game saved.
 //
 // Files: launcher.cpp (this), disc_image.cpp/.h (copies the game files out of
 // the player's disc image), movie_still.c/.h and pl_mpeg_sofdec.h (stills from
@@ -311,13 +312,14 @@ bool IsReservedKey(const std::string& name) {
 // ---------------------------------------------------------------------------
 
 enum : int {
-  IDC_TAB0 = 100, IDC_TAB1, IDC_TAB2,  // the three page buttons in the banner, in page order
+  IDC_TAB0 = 100, IDC_TAB1, IDC_TAB2, IDC_TAB3,  // the page buttons in the banner, in page order
   IDC_SCREEN, IDC_SHAPE, IDC_HUD, IDC_SCALE, IDC_SMOOTH, IDC_ANISO, IDC_FOLIAGE,
   IDC_KEYBOARD, IDC_NAMES, IDC_BINDLIST, IDC_SETKEY, IDC_ADDKEY, IDC_CLEARKEY, IDC_RESETKEYS,
   IDC_PLAY, IDC_SAVE, IDC_DEFAULTS, IDC_LOGS, IDC_SAVES, IDC_DIAG, IDC_STATUS,
-  IDC_STOP_COPY, IDC_COPY_AGAIN,
+  IDC_STOP_COPY, IDC_COPY_AGAIN, IDC_ACH_LIST, IDC_ACH_SOUND,
 };
-const int kPageCount = 3;
+const int kPageCount = 4;
+const int kAchievementsPage = 2;
 
 // Colours, taken from the game's own menus: white pages, a yellow-green
 // accent, charcoal bars.
@@ -343,7 +345,7 @@ enum class Setup { kReady, kNeeded, kCopying };
 struct App {
   HINSTANCE instance = nullptr;
   HWND window = nullptr;
-  HWND page[kPageCount] = {nullptr, nullptr, nullptr};
+  HWND page[kPageCount] = {};
   int current_page = 0;
   std::map<int, HWND> controls;  // by control id
   std::set<HWND> muted;          // labels drawn in the quieter text colour
@@ -1693,9 +1695,419 @@ HWND AddHeading(HWND parent, const wchar_t* text, int x, int y, int w) {
   return c;
 }
 
+// ---------------------------------------------------------------------------
+// Achievements page
+// ---------------------------------------------------------------------------
+//
+// The game keeps a copy of its achievement list, with what has been unlocked
+// and when, in <save data folder>\achievements\list.txt, and the icons as PNG
+// files next to it (src/achievements.cpp in the game; they come out of the
+// player's own copy of the game). This page shows that copy. It exists once
+// the game has been started; until then the page says so.
+
+struct Achievement {
+  int id = 0, score = 0, image = 0;
+  bool online_only = false;  // needs Xbox Live play, which this version does not have
+  bool secret = false;       // the game hides it until it is unlocked
+  uint64_t unlocked = 0;     // FILETIME of the unlock, 1 = unlocked at an unknown time, 0 = locked
+  std::wstring name, done_text, how_text;
+};
+
+struct AchievementPage {
+  std::vector<Achievement> list;  // those that can be earned first, then the online-only ones
+  std::map<int, Gdiplus::Bitmap*> icons;  // by image id; nullptr = looked for and not there
+  FILETIME stamp = {0, 0};        // last change of list.txt when it was read
+  bool found = false;
+  int scroll = 0;                 // pixels
+  int content = 0;                // height of all rows, pixels
+};
+AchievementPage ach;
+
+const int kAchHeader = 50;   // 96-DPI units
+const int kAchRow = 62;
+const int kAchGroup = 40;    // the line that introduces the online-only ones
+
+std::wstring AchievementFolder() {
+  std::wstring root = UserDataRoot();
+  return root.empty() ? L"" : root + L"\\achievements\\";
+}
+
+// Reads a picture file into a bitmap of its own (the file is not kept open).
+Gdiplus::Bitmap* LoadPicture(const std::wstring& path) {
+  HANDLE file = CreateFileW(path.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr,
+                            OPEN_EXISTING, 0, nullptr);
+  if (file == INVALID_HANDLE_VALUE) return nullptr;
+  DWORD size = GetFileSize(file, nullptr), got = 0;
+  Gdiplus::Bitmap* result = nullptr;
+  if (size > 0 && size < 4 * 1024 * 1024) {
+    if (HGLOBAL memory = GlobalAlloc(GMEM_MOVEABLE, size)) {
+      void* bytes = GlobalLock(memory);
+      BOOL ok = bytes && ReadFile(file, bytes, size, &got, nullptr) && got == size;
+      GlobalUnlock(memory);
+      IStream* stream = nullptr;
+      if (ok && SUCCEEDED(CreateStreamOnHGlobal(memory, TRUE, &stream)) && stream) {
+        Gdiplus::Bitmap* source = Gdiplus::Bitmap::FromStream(stream);
+        if (source && source->GetLastStatus() == Gdiplus::Ok && source->GetWidth() > 0) {
+          result = new Gdiplus::Bitmap(source->GetWidth(), source->GetHeight(), PixelFormat32bppARGB);
+          Gdiplus::Graphics g(result);
+          g.DrawImage(source, 0, 0, (INT)source->GetWidth(), (INT)source->GetHeight());
+        }
+        delete source;
+        stream->Release();  // frees the memory too
+      } else {
+        GlobalFree(memory);
+      }
+    }
+  }
+  CloseHandle(file);
+  return result;
+}
+
+Gdiplus::Bitmap* AchievementIcon(int image) {
+  auto found = ach.icons.find(image);
+  if (found != ach.icons.end()) return found->second;
+  Gdiplus::Bitmap* icon = LoadPicture(AchievementFolder() + L"icons\\" + std::to_wstring(image) + L".png");
+  ach.icons[image] = icon;
+  return icon;
+}
+
+// Reads list.txt again if it has changed. Returns true if the page changed.
+bool ReloadAchievements() {
+  std::wstring path = AchievementFolder() + L"list.txt";
+  WIN32_FILE_ATTRIBUTE_DATA info;
+  bool there = !path.empty() && GetFileAttributesExW(path.c_str(), GetFileExInfoStandard, &info);
+  if (!there) {
+    bool changed = ach.found;
+    ach.found = false;
+    ach.list.clear();
+    return changed;
+  }
+  if (ach.found && CompareFileTime(&info.ftLastWriteTime, &ach.stamp) == 0) return false;
+  std::string text;
+  if (!ReadFileUtf8(path, &text)) return false;
+  std::vector<Achievement> list;
+  size_t at = 0;
+  bool first = true;
+  while (at < text.size()) {
+    size_t end = text.find('\n', at);
+    if (end == std::string::npos) end = text.size();
+    std::string line = text.substr(at, end - at);
+    at = end + 1;
+    if (!line.empty() && line.back() == '\r') line.pop_back();
+    if (first) {
+      first = false;
+      if (line.compare(0, 16, "RR6-ACHIEVEMENTS") != 0) return false;  // not ours
+      continue;
+    }
+    if (line.empty() || line[0] == '#') continue;
+    std::vector<std::string> field;
+    size_t from = 0;
+    while (true) {
+      size_t tab = line.find('\t', from);
+      field.push_back(line.substr(from, tab == std::string::npos ? std::string::npos : tab - from));
+      if (tab == std::string::npos) break;
+      from = tab + 1;
+    }
+    if (field.size() < 9) continue;
+    Achievement a;
+    a.id = atoi(field[0].c_str());
+    a.score = atoi(field[1].c_str());
+    a.online_only = field[2] == "1";
+    a.secret = field[3] == "1";
+    a.unlocked = strtoull(field[4].c_str(), nullptr, 10);
+    a.image = atoi(field[5].c_str());
+    a.name = Widen(field[6]);
+    a.done_text = Widen(field[7]);
+    a.how_text = Widen(field[8]);
+    list.push_back(a);
+  }
+  std::stable_sort(list.begin(), list.end(),
+                   [](const Achievement& a, const Achievement& b) { return a.online_only < b.online_only; });
+  ach.list = list;
+  ach.stamp = info.ftLastWriteTime;
+  ach.found = true;
+  return true;
+}
+
+std::wstring UnlockDate(uint64_t filetime) {
+  if (filetime < 2) return L"";
+  FILETIME ft = {(DWORD)(filetime & 0xFFFFFFFFu), (DWORD)(filetime >> 32)};
+  SYSTEMTIME utc, local;
+  if (!FileTimeToSystemTime(&ft, &utc) || !SystemTimeToTzSpecificLocalTime(nullptr, &utc, &local)) return L"";
+  wchar_t text[32];
+  swprintf(text, 32, L"%04d-%02d-%02d", local.wYear, local.wMonth, local.wDay);
+  return text;
+}
+
+// Sets the scroll bar to match the list, and keeps the position in range.
+void LayoutAchievements(HWND hwnd) {
+  RECT rc;
+  GetClientRect(hwnd, &rc);
+  int view = std::max(0L, rc.bottom - S(kAchHeader));
+  bool online = false;
+  int content = 0;
+  for (const Achievement& a : ach.list) {
+    if (a.online_only && !online) {
+      online = true;
+      content += S(kAchGroup);
+    }
+    content += S(kAchRow);
+  }
+  ach.content = content;
+  ach.scroll = std::max(0, std::min(ach.scroll, content - view));
+  SCROLLINFO si = {sizeof(si), SIF_RANGE | SIF_PAGE | SIF_POS | SIF_DISABLENOSCROLL, 0, std::max(0, content - 1),
+                   (UINT)view, ach.scroll, 0};
+  SetScrollInfo(hwnd, SB_VERT, &si, TRUE);
+}
+
+void ScrollAchievements(HWND hwnd, int to) {
+  RECT rc;
+  GetClientRect(hwnd, &rc);
+  int view = std::max(0L, rc.bottom - S(kAchHeader));
+  to = std::max(0, std::min(to, ach.content - view));
+  if (to == ach.scroll) return;
+  ach.scroll = to;
+  SetScrollPos(hwnd, SB_VERT, to, TRUE);
+  InvalidateRect(hwnd, nullptr, FALSE);
+}
+
+void PaintAchievements(HWND hwnd, HDC dc) {
+  RECT rc;
+  GetClientRect(hwnd, &rc);
+  const int w = rc.right, h = rc.bottom;
+  if (w <= 0 || h <= 0) return;
+  Gdiplus::Bitmap canvas(w, h, PixelFormat32bppPARGB);
+  Gdiplus::Graphics g(&canvas);
+  g.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
+  g.SetTextRenderingHint(Gdiplus::TextRenderingHintClearTypeGridFit);
+  g.SetInterpolationMode(Gdiplus::InterpolationModeHighQualityBicubic);
+  g.Clear(Rgb(kPaper));
+
+  Gdiplus::FontFamily segoe(L"Segoe UI");
+  const Gdiplus::FontFamily* family =
+      segoe.IsAvailable() ? &segoe : Gdiplus::FontFamily::GenericSansSerif();
+  Gdiplus::Font heading(family, (float)S(15), Gdiplus::FontStyleBold, Gdiplus::UnitPixel);
+  Gdiplus::Font name_font(family, (float)S(14), Gdiplus::FontStyleBold, Gdiplus::UnitPixel);
+  Gdiplus::Font text_font(family, (float)S(12), Gdiplus::FontStyleRegular, Gdiplus::UnitPixel);
+  Gdiplus::SolidBrush ink(Rgb(kInk)), steel(Rgb(kSteel)), green(Rgb(kGreen)), faint(Rgb(RGB(0x9A, 0xA3, 0xA9)));
+  Gdiplus::StringFormat plain(Gdiplus::StringFormat::GenericTypographic());
+  plain.SetFormatFlags(plain.GetFormatFlags() | Gdiplus::StringFormatFlagsNoWrap);
+  Gdiplus::StringFormat right(&plain);
+  right.SetAlignment(Gdiplus::StringAlignmentFar);
+  Gdiplus::StringFormat wrapped(Gdiplus::StringFormat::GenericTypographic());
+  wrapped.SetTrimming(Gdiplus::StringTrimmingEllipsisWord);
+  wrapped.SetFormatFlags(wrapped.GetFormatFlags() | Gdiplus::StringFormatFlagsLineLimit);
+
+  if (!ach.found || ach.list.empty()) {
+    Gdiplus::StringFormat centre;
+    centre.SetAlignment(Gdiplus::StringAlignmentCenter);
+    centre.SetLineAlignment(Gdiplus::StringAlignmentCenter);
+    g.DrawString(L"Your achievements appear here once you have started the game.\n\n"
+                 L"Ridge Racer 6 has 36 of them. While playing, F7 shows the list, and so does Y\n"
+                 L"after Esc (or after holding Back + Start on a controller).",
+                 -1, &text_font, Gdiplus::RectF(0, 0, (float)w, (float)h), &centre, &steel);
+  } else {
+    // Totals: counted against what can be earned without online play.
+    int earnable = 0, earned = 0, online = 0, score = 0, possible = 0;
+    for (const Achievement& a : ach.list) {
+      if (a.online_only) {
+        ++online;
+        continue;
+      }
+      ++earnable;
+      possible += a.score;
+      if (a.unlocked) {
+        ++earned;
+        score += a.score;
+      }
+    }
+
+    // The rows, under the heading.
+    const int top = S(kAchHeader);
+    g.SetClip(Gdiplus::Rect(0, top, w, h - top));
+    int y = top - ach.scroll;
+    bool group_shown = false;
+    for (const Achievement& a : ach.list) {
+      if (a.online_only && !group_shown) {
+        group_shown = true;
+        if (y + S(kAchGroup) > top && y < h) {
+          wchar_t line[128];
+          swprintf(line, 128, L"Need online play, which this version does not have (%d)", online);
+          g.DrawString(line, -1, &name_font, Gdiplus::PointF(0, (float)(y + S(16))), &plain, &steel);
+        }
+        y += S(kAchGroup);
+      }
+      const int row = S(kAchRow);
+      if (y + row > top && y < h) {
+        const bool unlocked = a.unlocked != 0;
+        const bool hidden = a.secret && !unlocked;
+        Gdiplus::RectF box(0, (float)(y + S(3)), (float)(w - S(6)), (float)(row - S(6)));
+        Gdiplus::SolidBrush fill(unlocked ? Rgb(RGB(0xF0, 0xF8, 0xDC)) : Rgb(kMist));
+        g.FillRectangle(&fill, box);
+        if (unlocked) {
+          Gdiplus::SolidBrush mark(Rgb(kLime));
+          g.FillRectangle(&mark, Gdiplus::RectF(box.X, box.Y, (float)S(4), box.Height));
+        }
+        const int icon = S(44);
+        Gdiplus::RectF icon_box(box.X + S(14), box.Y + (box.Height - icon) / 2, (float)icon, (float)icon);
+        Gdiplus::Bitmap* picture = hidden ? nullptr : AchievementIcon(a.image);
+        if (picture) {
+          Gdiplus::ImageAttributes attributes;
+          if (!unlocked) {
+            // Locked: grey and pale.
+            Gdiplus::ColorMatrix grey = {{{0.30f, 0.30f, 0.30f, 0, 0},
+                                          {0.59f, 0.59f, 0.59f, 0, 0},
+                                          {0.11f, 0.11f, 0.11f, 0, 0},
+                                          {0, 0, 0, 0.55f, 0},
+                                          {0, 0, 0, 0, 1}}};
+            attributes.SetColorMatrix(&grey);
+          }
+          g.DrawImage(picture, icon_box, 0, 0, (Gdiplus::REAL)picture->GetWidth(),
+                      (Gdiplus::REAL)picture->GetHeight(), Gdiplus::UnitPixel, &attributes);
+        } else {
+          Gdiplus::SolidBrush tile(Rgb(kLine));
+          g.FillRectangle(&tile, icon_box);
+          Gdiplus::StringFormat centre;
+          centre.SetAlignment(Gdiplus::StringAlignmentCenter);
+          centre.SetLineAlignment(Gdiplus::StringAlignmentCenter);
+          Gdiplus::Font mark(family, (float)S(20), Gdiplus::FontStyleBold, Gdiplus::UnitPixel);
+          g.DrawString(hidden ? L"?" : L"G", -1, &mark, icon_box, &centre, &steel);
+        }
+
+        wchar_t points[32];
+        swprintf(points, 32, L"%d G", a.score);
+        const float edge = box.X + box.Width - S(14);
+        g.DrawString(points, -1, &name_font, Gdiplus::PointF(edge, box.Y + S(9)), &right, unlocked ? &green : &steel);
+        std::wstring state;
+        if (unlocked) {
+          std::wstring date = UnlockDate(a.unlocked);
+          state = date.empty() ? L"Unlocked" : L"Unlocked " + date;
+        } else if (a.online_only) {
+          state = L"Online only";
+        }
+        if (!state.empty()) {
+          g.DrawString(state.c_str(), -1, &text_font, Gdiplus::PointF(edge, box.Y + S(31)), &right,
+                       unlocked ? &green : &faint);
+        }
+
+        const float tx = icon_box.X + icon + S(14);
+        const float tw = edge - S(118) - tx;
+        const std::wstring& name = hidden ? std::wstring(L"Secret achievement") : a.name;
+        const std::wstring& text = hidden ? std::wstring(L"Keep playing to find out what this one is.")
+                                          : (unlocked || a.how_text.empty()) ? a.done_text : a.how_text;
+        g.DrawString(name.c_str(), -1, &name_font, Gdiplus::RectF(tx, box.Y + S(6), tw, (float)S(20)), &wrapped,
+                     &ink);
+        g.DrawString(text.c_str(), -1, &text_font, Gdiplus::RectF(tx, box.Y + S(25), tw, (float)S(30)), &wrapped,
+                     &steel);
+      }
+      y += row;
+    }
+    g.ResetClip();
+
+    // The heading stays put: how far along, and a bar.
+    Gdiplus::SolidBrush paper(Rgb(kPaper));
+    g.FillRectangle(&paper, 0, 0, w, top);
+    wchar_t line[96];
+    swprintf(line, 96, L"%d of %d earned", earned, earnable);
+    g.DrawString(line, -1, &heading, Gdiplus::PointF(0, (float)S(4)), &plain, &ink);
+    Gdiplus::RectF measured;
+    g.MeasureString(line, -1, &heading, Gdiplus::PointF(0, 0), &plain, &measured);
+    swprintf(line, 96, L"%d G of %d G", score, possible);
+    g.DrawString(line, -1, &text_font, Gdiplus::PointF(measured.Width + S(16), (float)S(7)), &plain, &steel);
+    const float bar_y = (float)S(31), bar_w = (float)(w - S(6));
+    Gdiplus::SolidBrush track(Rgb(kLine)), bar(Rgb(kLime));
+    g.FillRectangle(&track, 0.0f, bar_y, bar_w, (float)S(6));
+    if (earnable > 0 && earned > 0) g.FillRectangle(&bar, 0.0f, bar_y, bar_w * earned / earnable, (float)S(6));
+  }
+
+  Gdiplus::Graphics screen(dc);
+  screen.DrawImage(&canvas, 0, 0);
+}
+
+LRESULT CALLBACK AchievementsProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
+  switch (msg) {
+    case WM_PAINT: {
+      PAINTSTRUCT ps;
+      HDC dc = BeginPaint(hwnd, &ps);
+      PaintAchievements(hwnd, dc);
+      EndPaint(hwnd, &ps);
+      return 0;
+    }
+    case WM_ERASEBKGND:
+      return 1;
+    case WM_GETDLGCODE:
+      return DLGC_WANTARROWS;
+    case WM_LBUTTONDOWN:
+      SetFocus(hwnd);
+      return 0;
+    case WM_MOUSEWHEEL:
+      ScrollAchievements(hwnd, ach.scroll - GET_WHEEL_DELTA_WPARAM(wp) * S(kAchRow) / WHEEL_DELTA);
+      return 0;
+    case WM_KEYDOWN: {
+      RECT rc;
+      GetClientRect(hwnd, &rc);
+      const int page = std::max(S(kAchRow), (int)rc.bottom - S(kAchHeader) - S(kAchRow));
+      switch (wp) {
+        case VK_UP: ScrollAchievements(hwnd, ach.scroll - S(kAchRow)); return 0;
+        case VK_DOWN: ScrollAchievements(hwnd, ach.scroll + S(kAchRow)); return 0;
+        case VK_PRIOR: ScrollAchievements(hwnd, ach.scroll - page); return 0;
+        case VK_NEXT: ScrollAchievements(hwnd, ach.scroll + page); return 0;
+        case VK_HOME: ScrollAchievements(hwnd, 0); return 0;
+        case VK_END: ScrollAchievements(hwnd, ach.content); return 0;
+      }
+      break;
+    }
+    case WM_VSCROLL: {
+      SCROLLINFO si = {sizeof(si), SIF_ALL, 0, 0, 0, 0, 0};
+      GetScrollInfo(hwnd, SB_VERT, &si);
+      int to = ach.scroll;
+      switch (LOWORD(wp)) {
+        case SB_LINEUP: to -= S(kAchRow); break;
+        case SB_LINEDOWN: to += S(kAchRow); break;
+        case SB_PAGEUP: to -= (int)si.nPage; break;
+        case SB_PAGEDOWN: to += (int)si.nPage; break;
+        case SB_THUMBTRACK:
+        case SB_THUMBPOSITION: to = si.nTrackPos; break;
+        case SB_TOP: to = 0; break;
+        case SB_BOTTOM: to = ach.content; break;
+      }
+      ScrollAchievements(hwnd, to);
+      return 0;
+    }
+  }
+  return DefWindowProcW(hwnd, msg, wp, lp);
+}
+
+// Called when the page is shown and when the launcher comes to the front
+// again (the game may have run in between).
+void RefreshAchievements() {
+  HWND list = Ctl(IDC_ACH_LIST);
+  if (!list) return;
+  bool changed = ReloadAchievements();
+  LayoutAchievements(list);
+  if (changed) InvalidateRect(list, nullptr, FALSE);
+}
+
+// The sound the game plays with the pop-up: the player's own achievement.wav
+// next to this launcher if there is one, otherwise the one the game comes with.
+void PlayAchievementSound() {
+  std::wstring game_dir = app.game_exe.substr(0, app.game_exe.find_last_of(L"\\/") + 1);
+  std::wstring candidates[] = {app.dir + L"achievement.wav", game_dir + L"achievement.wav",
+                               game_dir + L"sounds\\achievement.wav"};
+  for (const std::wstring& file : candidates) {
+    if (GetFileAttributesW(file.c_str()) != INVALID_FILE_ATTRIBUTES) {
+      PlaySoundW(file.c_str(), nullptr, SND_FILENAME | SND_ASYNC | SND_NODEFAULT);
+      SetStatus(L"Playing " + file.substr(file.find_last_of(L"\\/") + 1) + L".");
+      return;
+    }
+  }
+  SetStatus(L"No achievement.wav was found.");
+}
+
 void ShowPage(int page) {
   if (page < 0 || page >= kPageCount) return;
   app.current_page = page;
+  if (page == kAchievementsPage) RefreshAchievements();
   for (int p = 0; p < kPageCount; ++p) {
     ShowWindow(app.page[p], p == page ? SW_SHOW : SW_HIDE);
     InvalidateRect(Ctl(IDC_TAB0 + p), nullptr, FALSE);
@@ -1710,7 +2122,7 @@ void BuildUi() {
   // Page buttons, on the dark strip at the foot of the banner.
   // Each is as wide as its text plus 12 units either side, so the first one's
   // text lines up with the 24-unit margin used everywhere else.
-  const wchar_t* tabs[kPageCount] = {L"Display", L"Controls", L"Troubleshooting"};
+  const wchar_t* tabs[kPageCount] = {L"Display", L"Controls", L"Achievements", L"Troubleshooting"};
   HDC measure = GetDC(app.window);
   HGDIOBJ measure_font = SelectObject(measure, app.tab_font);
   int tx = S(12);
@@ -1804,8 +2216,20 @@ void BuildUi() {
   AddNote(pg, L"Double-click a row to change its key. Keys do not respond while Shift, Ctrl or Alt is held.",
           lx, y, full, 18);
 
+  // ---- Achievements page ----
+  pg = app.page[kAchievementsPage];
+  {
+    HWND list = CreateWindowExW(0, L"RR6Achievements", L"", WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL | WS_CLIPSIBLINGS,
+                                S(lx), S(10), S(full), S(kPageHeight - 20), pg, (HMENU)(INT_PTR)IDC_ACH_LIST,
+                                app.instance, nullptr);
+    app.controls[IDC_ACH_LIST] = list;
+    // Over the list's heading, at the right: a way to hear the unlock sound.
+    HWND sound = AddButton(pg, L"Play the unlock sound", lx + full - 190, 10, 170, 26, IDC_ACH_SOUND);
+    SetWindowPos(sound, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+  }
+
   // ---- Troubleshooting page ----
-  pg = app.page[2];
+  pg = app.page[3];
   y = 14;
   AddHeading(pg, L"Bug reports", lx, y, full);
   y += 22;
@@ -1865,6 +2289,7 @@ LRESULT HandleCommand(HWND hwnd, WPARAM wp) {
     }
     switch (id) {
       case IDC_KEYBOARD: UpdateEnabledStates(); break;
+      case IDC_ACH_SOUND: PlayAchievementSound(); break;
       case IDC_SETKEY: ChangeKey(false); break;
       case IDC_ADDKEY: ChangeKey(true); break;
       case IDC_CLEARKEY: {
@@ -1953,6 +2378,17 @@ LRESULT CALLBACK PageProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
   switch (msg) {
+    case WM_ACTIVATE:
+      // Back in front, perhaps after a game: show what was unlocked meanwhile.
+      if (LOWORD(wp) != WA_INACTIVE && app.current_page == kAchievementsPage) RefreshAchievements();
+      break;
+    case WM_MOUSEWHEEL:
+      // The wheel goes to whatever has the keyboard; on the achievements page
+      // it should scroll the list wherever the keyboard is.
+      if (app.current_page == kAchievementsPage && Ctl(IDC_ACH_LIST)) {
+        return SendMessageW(Ctl(IDC_ACH_LIST), msg, wp, lp);
+      }
+      break;
     case WM_COMMAND:
       return HandleCommand(hwnd, wp);
     case WM_NOTIFY:
@@ -2119,6 +2555,10 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR command_line, int) {
   pc.lpfnWndProc = PageProc;
   pc.lpszClassName = L"RR6Page";
   RegisterClassExW(&pc);
+  WNDCLASSEXW ac = wc;
+  ac.lpfnWndProc = AchievementsProc;
+  ac.lpszClassName = L"RR6Achievements";
+  RegisterClassExW(&ac);
 
   // Fixed-size window; the layout is in 96-DPI units, scaled to the real DPI.
   // On a screen too small for all of it, the banner gives up height first.

@@ -64,6 +64,21 @@ refresh rate is set lower in the "..." menu, set it to 60 for this game;
 with a lower limit the game will probably run in slow motion.
 
 
+ACHIEVEMENTS
+------------
+The game's 36 achievements work as they did on the Xbox 360: when you earn
+one, a pop-up appears with a sound, and it is remembered.
+
+- The list: hold View + Menu for a second, then press Y. The D-pad or the
+  left stick scrolls it; B closes it.
+- 15 of the 36 need Xbox Live play, which this version does not have. The
+  list shows them apart, and counts your progress against the 21 you can
+  earn (565 of the 1000 gamerscore).
+- Your own sound: in Desktop Mode, put a file named achievement.wav into
+  this folder (next to ridge-racer-6.sh) and the game plays it instead of
+  its own chime.
+
+
 SETTINGS
 --------
 Settings are in bin/rr6_recomp.toml, a text file with every line explained

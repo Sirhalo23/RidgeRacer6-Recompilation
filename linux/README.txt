@@ -84,6 +84,22 @@ Keyboard (works together with a controller):
 The keys are listed in bin/rr6_recomp.toml and can be changed there.
 
 
+ACHIEVEMENTS
+------------
+The game's 36 achievements work as they did on the Xbox 360: when you earn
+one, a pop-up appears with a sound, and it is remembered.
+
+- The list: press F7 while playing. Without a keyboard: hold Back + Start for
+  a second, then press Y. The arrow keys, the D-pad or the stick scroll it;
+  Esc or B closes it.
+- 15 of the 36 need Xbox Live play, which this version does not have. The
+  list shows them apart, and counts your progress against the 21 you can
+  earn (565 of the 1000 gamerscore).
+- Your own sound: put a file named achievement.wav into this folder (next to
+  ridge-racer-6.sh) and the game plays it instead of its own chime.
+- Progress is kept with your save data, in ~/.local/share/rr6_recomp.
+
+
 WHERE THINGS ARE KEPT
 ---------------------
   this folder/game/        the game files copied from your disc image

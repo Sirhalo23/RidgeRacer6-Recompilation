@@ -399,6 +399,16 @@ watch_for_fault() {  # watch_for_fault <process id of the game>
   done
 }
 
+# The game keeps its memory in a file in /dev/shm, which is left behind (a few
+# hundred MB of memory, until the next restart) whenever the game is stopped
+# hard rather than quitting. Clear such leftovers when no game is running.
+clear_leftovers() {
+  if ! pgrep -x rr6_recomp >/dev/null 2>&1; then
+    rm -f /dev/shm/xenia_memory_* 2>/dev/null
+  fi
+}
+clear_leftovers
+
 echo "Starting $TITLE. To leave the game: Esc, or hold Back + Start on a controller."
 cd "$BIN" || fail "The folder $BIN cannot be entered."
 rm -f "$LOGS"/run*.log "$LOGS/fault.txt" "$LOGS/console.txt" "$LOGS/last-exit.txt"
@@ -411,6 +421,7 @@ watcher=$!
 status=$?
 kill "$watcher" 2>/dev/null
 trap - INT TERM HUP
+clear_leftovers
 printf 'exit status %s\n' "$status" > "$LOGS/last-exit.txt"
 report="To report it, run tools/collect-report.sh in this folder and send the file it makes. Starting the game with --diagnostic first records more detail."
 if [ -f "$LOGS/fault.txt" ]; then

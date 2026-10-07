@@ -116,6 +116,14 @@ finds them by scanning data and `lis/addi` pairs for addresses that land on a
   processor cores" on every affinity call when the host has fewer than six.
 - The SDK audio worker thread busy-waits: it used 40-90% of one core in every
   Linux test run.
+- On Linux a game process that is killed (SIGKILL) leaves its guest memory
+  file behind in `/dev/shm` (`xenia_memory_<number>`, several hundred MB of
+  memory actually in use). A few dozen killed runs filled the test machine's
+  memory and later starts hung or were killed by the kernel. Unlinking the
+  file right after mapping it would avoid this.
+- A key-down event that a higher input listener marks as handled does not
+  reach the keyboard-as-controller driver, which is what one would want; noted
+  because it is not documented.
 - On Linux an unhandled guest access violation does not end the process. The
   handler logs "Unhandled guest access violation" and returns, the faulting
   instruction runs again, and this repeats without end (about 1,000 log lines a

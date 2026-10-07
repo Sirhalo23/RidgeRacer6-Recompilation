@@ -68,6 +68,9 @@ driver. `README.txt` in each archive has the details.
 - **Keyboard:** works alongside a controller; every key can be changed.
 - **Saving** to `Documents\rr6_recomp`.
 - **Quitting** from the keyboard or the controller, with a question first.
+- **Achievements:** the game's 36, with a pop-up and a sound when you earn
+  one, a list in the game (F7, or Y from the quit question) and in the
+  launcher. The 15 that need Xbox Live are shown apart.
 - **Bug reports:** the launcher can record a detailed log and pack it, with
   your PC's specifications and without your Windows user name, into one zip.
 
@@ -103,6 +106,22 @@ While playing: F4 opens the settings and F3 shows frame-rate statistics.
 
 To leave the game, press Esc, or hold Back + Start on a controller for a
 second. The game asks whether to quit: Enter or A quits, Esc or B goes back.
+
+## Achievements
+
+Ridge Racer 6 has 36 achievements worth 1000 gamerscore, and they work here:
+the game reports them as it did on the console, a pop-up with a sound appears,
+and the unlock is kept with your save data. Press F7 while playing for the
+list, or Esc and then Y; on a controller hold Back + Start for a second and
+then press Y. The launcher has an Achievements page as well.
+
+Fifteen of them need Xbox Live play (the online-battle ones, and those that
+need cars only given for online battles), which this version does not have.
+They are listed apart, and progress is counted against the 21 that can be
+earned, 565 of the 1000 gamerscore.
+
+The sound is an original chime. To use another, put your own `achievement.wav`
+next to the launcher (on Linux, next to `ridge-racer-6.sh`).
 
 ## Known limitations
 
