@@ -21,6 +21,7 @@ set(RR6RECOMP_SOURCES
     src/quit_prompt.cpp
     src/widescreen.cpp
     src/depth_bias_fix.cpp
+    src/lod_bias_fix.cpp
 )
 
 if(WIN32)

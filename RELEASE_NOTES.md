@@ -1,5 +1,20 @@
 # Release notes
 
+## Linux test build 03 (2026-10-07)
+
+- Fixed: the track was drawn black (road, scenery, buildings and sky; cars,
+  signs and the race display were right). It happened on every machine with
+  builds 01 and 02, and was reported from a Steam Deck. The cause is in the
+  SDK's Vulkan code, which turns a texture's LOD bias into a brightness
+  factor; the game's LOD bias is now set to zero on Linux (`rr6_zero_lod_bias`).
+  Distant textures are slightly softer than on Windows as a result.
+- Steam Deck: the start script notices when it was not started from Steam,
+  where the Deck's buttons act as a keyboard and mouse and the game's controls
+  are wrong, and offers to add the game to Steam. The Deck instructions say so
+  too.
+
+Checked with software rendering; not yet run again on a Steam Deck.
+
 ## v0.1.1 (2026-10-06)
 
 Inside the zip it calls itself "test build 05".
