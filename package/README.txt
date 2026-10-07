@@ -38,6 +38,14 @@ the zip before extracting it: right-click the zip, Properties, tick "Unblock",
 OK.) If the launcher will not open at all, copy your .iso into the
 PUT-ISO-HERE folder and use "Play without the launcher.bat" instead.
 
+Some antivirus programs flag bin\rexruntime.dll under a general name such
+as "Wacatac", "Yogi", "Ulise" or "Generic". That file is the runtime of the
+ReXGlue SDK, the toolkit this port is made with, copied unchanged from the
+SDK's own download; the project's page on GitHub explains it and says how to
+check the file ("If your antivirus flags rexruntime.dll"). If the game does
+not start and the file is gone from the bin folder, your antivirus has
+removed it.
+
 
 THE LAUNCHER
 ------------
