@@ -130,6 +130,15 @@ Workaround here: `src/lod_bias_fix.cpp` sets the game's LOD bias to zero on
 Linux (`rr6_zero_lod_bias`). The fix in the SDK is to load word 3 for this
 extract.
 
+Fixed in our fork of the SDK
+([Sirhalo23/rexglue-sdk](https://github.com/Sirhalo23/rexglue-sdk), branch
+`rr6`, commit `af97f22`). Checked on the test rig on 2026-10-07 with the
+workaround switched off (`--rr6_zero_lod_bias=false`), the same race both
+times (Single Race, Lakeshore Drive, class 1): with the stock v0.10.0
+`librexruntime.so` and `librexgpu-xenos.so` the road and scenery are black;
+with the two files built from the fork they are textured. Not sent upstream
+yet.
+
 ## 8. Smaller observations
 
 - `present_effect` only accepts `bilinear` in the prebuilt Windows runtime

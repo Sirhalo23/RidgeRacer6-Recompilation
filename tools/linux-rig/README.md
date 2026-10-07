@@ -28,6 +28,8 @@ Use:
     run/press.sh :93 start   # one confirmed button press (a, b, x, y, start, up, down, left, right, lb, rb)
     run/shot.sh  :93 name 5  # wait 5 s, screenshot to run/seq/name.png
     run/stop.sh
+    run/p1.sh :93 Down 'stick 0,-32767' menu1 45   # one press for very slow frames, then a screenshot
+    run/torace4.sh :93 tag   # "Single Race" highlighted -> race, 40 s between presses
 
 Things that cost time to find out:
 
@@ -42,6 +44,11 @@ Things that cost time to find out:
 - `strace` on the process slows it to a crawl (the runtime re-reads
   /sys/devices/system/cpu/online constantly); attach it only for a few seconds.
 - Boot to the title screen takes 3-6 minutes; a race takes another 4-10.
+- After the save has loaded, the main menu has a 3D scene behind it and a
+  frame takes 4 to 16 seconds. Input is read once per frame, so a key is
+  "held" for a whole frame however briefly it was pressed, and that can count
+  as two steps in a menu. Use `p1.sh`, wait for the picture to settle, look,
+  then press again. The title screen sometimes ignores the first Start.
 
 `rig_probe.cpp` is an optional extra source file for the rig build only (add it
 to `RR6RECOMP_SOURCES` in the rig's copy of `CMakeLists.txt`): every five seconds
