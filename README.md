@@ -22,8 +22,8 @@ Racer and its trademarks.
    [Releases](../../releases).
 2. Unzip it to a normal, writable folder (not Program Files, and do not run it
    from inside the zip).
-3. Start `RR6 Launcher.exe`. The programs are not code-signed, so Windows may
-   show "Windows protected your PC": choose More info, then Run anyway.
+3. Start `RR6 Launcher.exe`. Windows may warn about it; see
+   [If Windows warns about the download](#if-windows-warns-about-the-download).
 4. Press **Choose disc image...** and pick your Ridge Racer 6 `.iso`, wherever
    it is. The launcher checks that it is the right game and copies the game
    files out of it (about 6 GB, a few minutes, once). The image is only read and
@@ -31,6 +31,30 @@ Racer and its trademarks.
 5. Choose your settings (the defaults suit most PCs) and press **Play**.
 
 `README.txt` in the zip has the details, including how to report a problem.
+
+## If Windows warns about the download
+
+The programs in the zip are not code-signed, and every new release is a file
+that few people have downloaded yet. Windows and Edge warn about any download
+like that, whatever is in it. The package does not install anything and does
+not ask for administrator rights.
+
+- **Edge blocks the download** ("isn't commonly downloaded"): open the
+  downloads list, choose the three dots next to the file, then **Keep**, then
+  **Show more**, then **Keep anyway**.
+- **Before unzipping:** right-click the zip, choose **Properties**, tick
+  **Unblock** and press OK. Otherwise Windows may ask again for each program
+  in the folder.
+- **"Windows protected your PC" on the first start:** choose **More info**,
+  then **Run anyway**.
+
+To check that the file is the one published here, compare its SHA-256 with
+`SHA256SUMS.txt` on the release page. In PowerShell, with the file's name:
+
+    Get-FileHash .\RidgeRacer6-PC-v0.1.0.zip
+
+If your antivirus names a specific threat instead of giving one of the
+warnings above, please [open an issue](../../issues) with its exact wording.
 
 ## Linux and Steam Deck (experimental)
 
