@@ -103,6 +103,18 @@ Copy-Item -LiteralPath (Join-Path (Join-Path $ProjectDir 'config') 'rr6_recomp.d
 $exeHash = (Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLower()
 $launcherHash = (Get-FileHash -LiteralPath (Join-Path $ProjectDir 'RR6 Launcher.exe') -Algorithm SHA256).Hash.ToLower()
 $built = (Get-Item -LiteralPath $exe).LastWriteTime.ToString('yyyy-MM-dd HH:mm')
+# Which SDK the two runtime files come from: the version header of the SDK next
+# to the project (where build-windows.bat takes it from). Builds of our fork
+# are numbered x.y.z.100 and up.
+$sdkVersion = '0.10.0'
+$sdkHeader = Join-Path (Join-Path (Join-Path (Join-Path (Join-Path (Split-Path -Parent $ProjectDir) 'sdk') 'win-amd64') 'include') 'rex') 'version.h'
+if (Test-Path -LiteralPath $sdkHeader) {
+    $found = Select-String -LiteralPath $sdkHeader -Pattern '^#define REXGLUE_VERSION_STRING "([^"]+)"' | Select-Object -First 1
+    if ($found) { $sdkVersion = $found.Matches[0].Groups[1].Value }
+}
+$sdkSource = 'github.com/rexglue/rexglue-sdk'
+if ($sdkVersion -match '^\d+\.\d+\.\d+\.(\d+)$' -and [int]$Matches[1] -ge 100) { $sdkSource = 'our fork, github.com/Sirhalo23/rexglue-sdk' }
+$runtimeHash = (Get-FileHash -LiteralPath (Join-Path $BuildDir 'rexruntime.dll') -Algorithm SHA256).Hash.ToLower()
 $info = @(
     "Ridge Racer 6 - PC test build $tag",
     "Built:        $built (Windows x64, Direct3D 12)",
@@ -110,7 +122,8 @@ $info = @(
     "Launcher:     RR6 Launcher.exe    SHA-256 $launcherHash",
     'Game version: USA disc, title ID 4E4D07D3, default.xex SHA-256',
     '              39D3C0004EC62AEB0FE3E7E1889CF25D98FBD27987B6BC6B5FF30A56FFBA6C00',
-    'Runtime:      ReXGlue SDK 0.10.0'
+    "Runtime:      ReXGlue SDK $sdkVersion ($sdkSource)",
+    "              bin\rexruntime.dll SHA-256 $runtimeHash"
 ) -join "`r`n"
 [System.IO.File]::WriteAllText((Join-Path $stage 'BUILD-INFO.txt'), $info + "`r`n", (New-Object System.Text.UTF8Encoding($false)))
 

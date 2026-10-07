@@ -26,17 +26,27 @@
 // file asks for largely makes up for.
 //
 // Direct3D 12 (Windows) does not have the fault, so the default there is off.
-// Remove this file once the SDK reads the right word.
+// Our fork of the SDK (github.com/Sirhalo23/rexglue-sdk, versions 0.10.0.100
+// and later) reads the right word, so a build against it has the default off
+// too and keeps the game's own sharpening. Against the stock v0.10.0 Linux
+// package the default stays on. Remove this file once no supported SDK has
+// the fault.
 
 #include <cstdint>
 
 #include <rex/cvar.h>
 #include <rex/hook.h>
 #include <rex/ppc/context.h>
+#include <rex/version.h>
 
 #include "generated/default/rr6_recomp_init.h"
 
+// The fork numbers its builds 0.10.0.100, 0.10.0.101, ...; upstream's v0.10.0
+// has a fourth number of 0.
 #if defined(_WIN32)
+#define RR6_ZERO_LOD_BIAS_DEFAULT false
+#elif REXGLUE_VERSION_MAJOR == 0 && REXGLUE_VERSION_MINOR == 10 && \
+    REXGLUE_VERSION_PATCH == 0 && REXGLUE_VERSION_TWEAK >= 100
 #define RR6_ZERO_LOD_BIAS_DEFAULT false
 #else
 #define RR6_ZERO_LOD_BIAS_DEFAULT true
@@ -44,8 +54,9 @@
 
 REXCVAR_DEFINE_BOOL(rr6_zero_lod_bias, RR6_ZERO_LOD_BIAS_DEFAULT, "RR6",
                     "Set every texture LOD bias the game asks for to zero. Needed on Vulkan "
-                    "(Linux, Steam Deck), where the SDK turns a LOD bias into a brightness "
-                    "factor and the track comes out black; not needed on Direct3D 12.");
+                    "(Linux, Steam Deck) with the stock SDK v0.10.0, which turns a LOD bias "
+                    "into a brightness factor so that the track comes out black; not needed "
+                    "on Direct3D 12 or with the fork's SDK.");
 
 // SetSamplerState(D3DSAMP_MIPMAPLODBIAS): r3 = device, r4 = sampler, r5 = float bits.
 REX_HOOK_RAW(sub_82256F00) {

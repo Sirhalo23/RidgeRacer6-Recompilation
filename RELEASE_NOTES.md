@@ -29,6 +29,19 @@ On Windows so far: "360!" was earned, the launcher's page shows the list, and
 the game starts and quits through the quit question. The new pop-up and its
 chime have been seen on the Linux build only.
 
+## Linux test build 04 (2026-10-07)
+
+- The black track of builds 01 and 02 is fixed where it came from: the SDK's
+  Vulkan code read a texture's brightness exponent from the wrong word. The
+  fix is in [our fork of the ReXGlue SDK](https://github.com/Sirhalo23/rexglue-sdk)
+  (v0.10.0.100), and this build is made with that fork's Linux package.
+- Build 03's way around the fault, setting the game's texture LOD bias to
+  zero, is off by default again, so distant track textures are as sharp as on
+  Windows. `rr6_zero_lod_bias = true` in the settings file brings it back.
+
+Checked with software rendering: the same race as for build 03, textured
+road and scenery. Not yet run on a Steam Deck or a desktop graphics card.
+
 ## Linux test build 03 (2026-10-07)
 
 - Fixed: the track was drawn black (road, scenery, buildings and sky; cars,

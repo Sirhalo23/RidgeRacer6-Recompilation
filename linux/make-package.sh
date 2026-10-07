@@ -29,6 +29,13 @@ done
 
 source_note="$(git rev-parse --short HEAD 2>/dev/null || true)"
 made="$(date -u '+%Y-%m-%d')"
+# Which SDK the two runtime libraries come from. Builds of our fork
+# (github.com/Sirhalo23/rexglue-sdk) are numbered x.y.z.100 and up.
+sdk_version="$(sed -nE 's/^#define REXGLUE_VERSION_STRING "([^"]+)".*/\1/p' "$SDK/include/rex/version.h" 2>/dev/null)"
+sdk_source="github.com/rexglue/rexglue-sdk"
+case "$sdk_version" in
+  *.*.*.[1-9][0-9][0-9]*) sdk_source="our fork, github.com/Sirhalo23/rexglue-sdk" ;;
+esac
 
 assemble() {  # assemble <folder name> <readme> <kind text> [deck]
   local dir="$WORK/$1"
@@ -49,6 +56,7 @@ assemble() {  # assemble <folder name> <readme> <kind text> [deck]
   {
     echo "Ridge Racer 6 - $3 test build $NUMBER"
     echo "made: $made${source_note:+  source: $source_note}"
+    echo "runtime: ReXGlue SDK ${sdk_version:-unknown} ($sdk_source)"
   } > "$dir/BUILD.txt"
   if [ -n "$4" ]; then
     echo "This file tells ridge-racer-6.sh that this is the Steam Deck package: it then writes the Deck's settings on the first start. Delete it to have settings chosen for the screen instead." > "$dir/steam-deck"

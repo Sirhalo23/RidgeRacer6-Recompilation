@@ -13,8 +13,12 @@ git for that reason.
 - Visual Studio 2022 Build Tools with the "Desktop development with C++"
   workload (it brings CMake and Ninja).
 - LLVM/Clang 18 or newer.
-- The [ReXGlue SDK](https://github.com/rexglue/rexglue-sdk) v0.10.0, Windows
-  package.
+- The ReXGlue SDK, Windows package. The releases are built with
+  [our fork](https://github.com/Sirhalo23/rexglue-sdk/releases) of it
+  (`rexglue-sdk-0.10.0.100-win-amd64.zip` or later), which is v0.10.0 plus the
+  fixes listed in its `FORK.md`. The original
+  [v0.10.0](https://github.com/rexglue/rexglue-sdk/releases/tag/v0.10.0)
+  works as well.
 - Python 3, for the disc image tool.
 
 ## Folders
@@ -81,7 +85,11 @@ report can be turned into a function name
 
 ## Linux
 
-The same sources build against the SDK's Linux package (Vulkan).
+The same sources build against the SDK's Linux package (Vulkan). Use the
+fork's package here (`rexglue-sdk-0.10.0.100-linux-amd64.zip` or later): the
+original v0.10.0 draws the track black on Vulkan, and a build against it
+switches the game's texture sharpening off to get around that
+(`src/lod_bias_fix.cpp`).
 
 You need Clang 18 or newer, CMake 3.25 or newer, Ninja and g++, the SDK's
 Linux package unpacked into `../sdk/linux-amd64` (or anywhere, with `REXSDK`
