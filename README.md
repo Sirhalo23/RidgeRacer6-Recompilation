@@ -5,7 +5,8 @@
 An unofficial, fan-made native Windows version of **Ridge Racer 6** (Xbox 360,
 2005). The game's PowerPC program is translated to C++ and compiled into a
 Windows executable that runs on top of the
-[ReXGlue SDK](https://github.com/rexglue/rexglue-sdk). Status: early test
+[ReXGlue SDK](https://github.com/rexglue/rexglue-sdk) (from v0.1.3, our
+[fork](https://github.com/Sirhalo23/rexglue-sdk) of it). Status: early test
 release.
 
 > **You need your own copy of Ridge Racer 6 for the Xbox 360** (USA disc, title
@@ -51,60 +52,76 @@ not ask for administrator rights.
 To check that the file is the one published here, compare its SHA-256 with
 `SHA256SUMS.txt` on the release page. In PowerShell, with the file's name:
 
-    Get-FileHash .\RidgeRacer6-PC-v0.1.2.zip
+    Get-FileHash .\RidgeRacer6-PC-v0.1.3.zip
 
 If your antivirus names a threat instead of giving one of the warnings above,
 see the next section.
 
 ## If your antivirus flags rexruntime.dll
 
-Some antivirus programs flag one file of the package, `bin\rexruntime.dll`,
-under general-purpose names such as `Wacatac.B!ml`, `Gen:Variant.Yogi`,
-`Ulise` or `Mal/Generic`. On [VirusTotal](https://www.virustotal.com) the
-v0.1.2 zip is flagged by 20 of 67 scanners for that reason. File by file
+Some antivirus programs flag one file of the package, `bin\rexruntime.dll`.
+It is the runtime library of the ReXGlue SDK, the toolkit this port is made
+with: the part that stands in for the console.
+
+**From v0.1.3 on**, that file is built from
+[our fork of the SDK](https://github.com/Sirhalo23/rexglue-sdk) by the fork's
+public build workflow, and far fewer scanners flag it. On
+[VirusTotal](https://www.virustotal.com), on the day it was built
 (7 October 2026):
 
 | File | Flagged by | Where it comes from |
 | --- | --- | --- |
+| `RidgeRacer6-PC-v0.1.3.zip` | [8 of 67](https://www.virustotal.com/gui/file/fa3932dcb54baff57c327f4d22eff78d988cdf60eda67a3213c055b704033557) | the release |
+| `bin\rexruntime.dll` | [8 of 71](https://www.virustotal.com/gui/file/172a80fa46f85b2c66e3b517c89c3f8a3cde298ec7dd4cfc4955ba74fb846e13) | the fork's release v0.10.0.100 |
 | `RR6 Launcher.exe` | [0 of 71](https://www.virustotal.com/gui/file/d5a7e97493515bf119f6dfba7f3cd11b2743be968388728fbbf85feec048bf19) | built from this repository |
-| `bin\rr6_recomp.exe` | [0 of 71](https://www.virustotal.com/gui/file/35990d54cbad4dae490feb57a833c0862de5cb2352da17138a5fdc858c953884) | built from this repository |
-| `bin\rexgpu-xenos.dll` | [0 of 67](https://www.virustotal.com/gui/file/0c23cfa23fc4fa5638dc8a3dc0de87b1041d97705d4677774083f1f350cd8d89) | ReXGlue SDK, unchanged |
-| `bin\rexruntime.dll` | [28 of 71](https://www.virustotal.com/gui/file/e359209fb2b0570e693c966d4c1d99a82465d36ef70d033833fae56adb2f1b7a) | ReXGlue SDK, unchanged |
+| `bin\rr6_recomp.exe` | no report of its own yet | built from this repository |
+| `bin\rexgpu-xenos.dll` | no report of its own yet | the fork's release v0.10.0.100 |
 | the `.bat` and `.ps1` scripts | 0 | this repository, readable as text |
 
-`rexruntime.dll` is not built by this project. It is the runtime library of
-the [ReXGlue SDK](https://github.com/rexglue/rexglue-sdk), the toolkit this
-port is made with, copied byte for byte out of the SDK's own download
-(`rexglue-sdk-0.10.0-win-amd64.zip` on its
-[v0.10.0 release page](https://github.com/rexglue/rexglue-sdk/releases/tag/v0.10.0)).
-Every game ported with that SDK version ships the same file, and their
-downloads get the same result; VirusTotal lists them, and the SDK's own zip,
-under the file's Relations.
+The eight are one verdict, `Gen:Variant.Yogi.85276`, given by Bitdefender and
+by seven products that use its engine (ALYac, Arcabit, CTX, Emsisoft, eScan,
+GData, VIPRE). The zip's eight flags are the same eight. A new file's result
+can change during its first days; the links show the current state.
 
-The file is not packed or scrambled. It is unsigned, and it does what a
-console runtime has to do and what scanners that score a file by its
-ingredients count against an unknown program: it reserves a large block of
-memory and changes its protection (the console's memory), contains
+**v0.1.0 and v0.1.2** contain the SDK's own build of the file, copied byte
+for byte out of its download (`rexglue-sdk-0.10.0-win-amd64.zip` on the SDK's
+[v0.10.0 release page](https://github.com/rexglue/rexglue-sdk/releases/tag/v0.10.0)).
+That one is flagged by
+[28 of 71](https://www.virustotal.com/gui/file/e359209fb2b0570e693c966d4c1d99a82465d36ef70d033833fae56adb2f1b7a),
+under general-purpose names such as `Wacatac.B!ml`, `Ulise` and
+`Mal/Generic`, and the v0.1.2 zip by 20 of 67. Every game ported with that
+SDK version ships the same file, and their downloads get the same result;
+VirusTotal lists them under the file's Relations.
+
+Neither build of the file is packed or scrambled. Both are unsigned, and both
+do what a console runtime has to do and what scanners that score a file by
+its ingredients count against an unknown program: the file reserves a large
+block of memory and changes its protection (the console's memory), contains
 decryption and decompression code (for the game's own files), imports
 network functions (the console's network interface, passed on to Windows),
 and reads the keyboard and controllers. None of the names above identifies
 a known piece of malware; they are the labels such scanners give to a file
 they score as suspicious.
 
-That is an explanation, not a guarantee from this project: the file is
-somebody else's build. What you can check yourself:
+That is an explanation, not a guarantee. What you can check yourself:
 
-- That your copy is the SDK's file. In PowerShell, in the game's folder:
+- Which file you have. In PowerShell, in the game's folder:
 
       Get-FileHash .\bin\rexruntime.dll
 
-  The result should be
+  v0.1.3: `172A80FA46F85B2C66E3B517C89C3F8A3CDE298EC7DD4CFC4955BA74FB846E13`,
+  the file in `rexglue-sdk-0.10.0.100-win-amd64.zip` on the fork's
+  [release page](https://github.com/Sirhalo23/rexglue-sdk/releases/tag/v0.10.0.100).
+  v0.1.0 and v0.1.2:
   `E359209FB2B0570E693C966D4C1D99A82465D36EF70D033833FAE56ADB2F1B7A`, the
-  same as for the file in the SDK's zip.
-- The SDK's source code, which is public, and this repository's, which is
+  file in the SDK's own zip.
+- How the fork's file was made: GitHub built it from the tagged source, and
+  the run is public under the fork's Actions tab. What the fork changes is
+  listed in its `FORK.md`.
+- The source code: the SDK's, the fork's, and this repository's, which is
   everything else in the package. [Building it yourself](#building-it-yourself)
   gives you your own launcher and game program; `rexruntime.dll` still comes
-  out of the SDK's download unless you build the SDK from its source as well.
+  out of an SDK package unless you build the SDK from its source as well.
 
 If the game does not start and `rexruntime.dll` is gone from the `bin`
 folder, your antivirus has removed it. In Windows Security that is under
@@ -124,9 +141,10 @@ and instructions for the Deck, is being tested on a Deck and will be added to
 the same release.
 
 It is experimental. Test build 02 was tried once on a Steam Deck: it started,
-but drew the track black, which test build 03 fixes. Build 03 itself has only
-been run on a machine without a graphics card, with software rendering, so
-expect problems, and please report what you find.
+but drew the track black. Builds 03 and 04 fix that, 04 in the graphics code
+itself (it is made with our fork of the SDK). Both have only been run on a
+machine without a graphics card, with software rendering, so expect problems,
+and please report what you find.
 
 On a Steam Deck, add the game to Steam and start it from there: only then do
 the Deck's buttons work as a controller.
@@ -223,13 +241,13 @@ next to the launcher (on Linux, next to `ridge-racer-6.sh`).
 - Without a sound output device the game closes right after starting (the
   launcher warns about this).
 - The Linux and Steam Deck builds have hardly been run on real graphics
-  hardware, and have no settings window: settings are a text file. Distant
-  textures are slightly softer there than on Windows.
+  hardware, and have no settings window: settings are a text file.
 
 ## Building it yourself
 
 See [BUILDING.md](BUILDING.md). In short: your own `default.xex`, the ReXGlue
-SDK v0.10.0, Visual Studio's C++ build tools and Clang, then
+SDK (our fork's package, or the original v0.10.0), Visual Studio's C++ build
+tools and Clang, then
 `build-windows.bat`; on Linux, Clang, CMake and Ninja, then `build-linux.sh`.
 
 ## Reporting problems
