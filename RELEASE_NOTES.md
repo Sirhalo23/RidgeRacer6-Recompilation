@@ -5,6 +5,11 @@ code-signed and a new file has no download history. The README says what to
 do: [If Windows warns about the download](README.md#if-windows-warns-about-the-download).
 Each release page has the zip's SHA-256 in `SHA256SUMS.txt`.
 
+Some antivirus programs flag `bin\rexruntime.dll`, the ReXGlue SDK's own
+runtime file, which every release contains unchanged. The programs built
+from this repository are not flagged. Details and how to check the file:
+[If your antivirus flags rexruntime.dll](README.md#if-your-antivirus-flags-rexruntimedll).
+
 ## v0.1.2 (2026-10-07)
 
 Inside the zip it calls itself "test build 06". The first public Windows

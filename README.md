@@ -53,8 +53,66 @@ To check that the file is the one published here, compare its SHA-256 with
 
     Get-FileHash .\RidgeRacer6-PC-v0.1.2.zip
 
-If your antivirus names a specific threat instead of giving one of the
-warnings above, please [open an issue](../../issues) with its exact wording.
+If your antivirus names a threat instead of giving one of the warnings above,
+see the next section.
+
+## If your antivirus flags rexruntime.dll
+
+Some antivirus programs flag one file of the package, `bin\rexruntime.dll`,
+under general-purpose names such as `Wacatac.B!ml`, `Gen:Variant.Yogi`,
+`Ulise` or `Mal/Generic`. On [VirusTotal](https://www.virustotal.com) the
+v0.1.2 zip is flagged by 20 of 67 scanners for that reason. File by file
+(7 October 2026):
+
+| File | Flagged by | Where it comes from |
+| --- | --- | --- |
+| `RR6 Launcher.exe` | [0 of 71](https://www.virustotal.com/gui/file/d5a7e97493515bf119f6dfba7f3cd11b2743be968388728fbbf85feec048bf19) | built from this repository |
+| `bin\rr6_recomp.exe` | [0 of 71](https://www.virustotal.com/gui/file/35990d54cbad4dae490feb57a833c0862de5cb2352da17138a5fdc858c953884) | built from this repository |
+| `bin\rexgpu-xenos.dll` | [0 of 67](https://www.virustotal.com/gui/file/0c23cfa23fc4fa5638dc8a3dc0de87b1041d97705d4677774083f1f350cd8d89) | ReXGlue SDK, unchanged |
+| `bin\rexruntime.dll` | [28 of 71](https://www.virustotal.com/gui/file/e359209fb2b0570e693c966d4c1d99a82465d36ef70d033833fae56adb2f1b7a) | ReXGlue SDK, unchanged |
+| the `.bat` and `.ps1` scripts | 0 | this repository, readable as text |
+
+`rexruntime.dll` is not built by this project. It is the runtime library of
+the [ReXGlue SDK](https://github.com/rexglue/rexglue-sdk), the toolkit this
+port is made with, copied byte for byte out of the SDK's own download
+(`rexglue-sdk-0.10.0-win-amd64.zip` on its
+[v0.10.0 release page](https://github.com/rexglue/rexglue-sdk/releases/tag/v0.10.0)).
+Every game ported with that SDK version ships the same file, and their
+downloads get the same result; VirusTotal lists them, and the SDK's own zip,
+under the file's Relations.
+
+The file is not packed or scrambled. It is unsigned, and it does what a
+console runtime has to do and what scanners that score a file by its
+ingredients count against an unknown program: it reserves a large block of
+memory and changes its protection (the console's memory), contains
+decryption and decompression code (for the game's own files), imports
+network functions (the console's network interface, passed on to Windows),
+and reads the keyboard and controllers. None of the names above identifies
+a known piece of malware; they are the labels such scanners give to a file
+they score as suspicious.
+
+That is an explanation, not a guarantee from this project: the file is
+somebody else's build. What you can check yourself:
+
+- That your copy is the SDK's file. In PowerShell, in the game's folder:
+
+      Get-FileHash .\bin\rexruntime.dll
+
+  The result should be
+  `E359209FB2B0570E693C966D4C1D99A82465D36EF70D033833FAE56ADB2F1B7A`, the
+  same as for the file in the SDK's zip.
+- The SDK's source code, which is public, and this repository's, which is
+  everything else in the package. [Building it yourself](#building-it-yourself)
+  gives you your own launcher and game program; `rexruntime.dll` still comes
+  out of the SDK's download unless you build the SDK from its source as well.
+
+If the game does not start and `rexruntime.dll` is gone from the `bin`
+folder, your antivirus has removed it. In Windows Security that is under
+**Virus & threat protection** > **Protection history**: open the entry,
+choose **Actions**, then **Restore**. Whether to do that is your decision.
+
+If your antivirus flags any other file of the package, please
+[open an issue](../../issues) with its exact wording.
 
 ## Linux and Steam Deck (experimental)
 
