@@ -649,6 +649,27 @@ and runtime files built by us rather than taken from the SDK's download.
   `src/lod_bias_fix.cpp` is not needed; it stays until a package built
   against the fork's SDK has been run on real hardware.
 
+First builds against the fork (2026-10-07), both from release `v0.10.0.100`:
+
+- Windows test build 07: the SDK's Windows package unpacked into
+  `sdk\win-amd64` (the original moved to `sdk\win-amd64-stock`), then
+  `build-windows.bat` as usual. `generated/rexglue.cmake` asks for version
+  0.10.0 or newer, so 0.10.0.100 is accepted without changes. Started and a
+  race driven on Windows. `rexruntime.dll` from the fork's package on
+  VirusTotal the same day: 8 of 71, all the one Bitdefender-engine signature
+  (`Gen:Variant.Yogi.85276`), against 28 of 71 for the stock file. A new
+  file's result can still move over the following days.
+- Linux and Steam Deck test build 04: built on the rig with clang 20 against
+  the fork's Linux package. `rr6_zero_lod_bias` is off by default in such a
+  build (`src/lod_bias_fix.cpp` looks at `REXGLUE_VERSION_TWEAK`). Same race
+  as before: textured. The desktop package was started from its unpacked
+  folder. The packaged programs need the same glibc and libstdc++ as build 03.
+- When `build-linux.sh` finds a newer clang than the build folder was made
+  with, CMake throws its cache away and then does not find the SDK. Delete
+  `CMakeCache.txt` and `CMakeFiles` in the build folder and run it again.
+- Both package scripts now write the SDK's version and where it came from
+  into the build info file.
+
 Building the SDK from source on Linux (Ubuntu 24.04), as done on the rig:
 
     git clone https://github.com/Sirhalo23/rexglue-sdk && cd rexglue-sdk
