@@ -58,16 +58,17 @@ warnings above, please [open an issue](../../issues) with its exact wording.
 
 ## Linux and Steam Deck (experimental)
 
-There are test builds for desktop Linux and for the Steam Deck, as
-`RidgeRacer6-Linux-TestBuild-<n>.tar.gz` and
-`RidgeRacer6-SteamDeck-TestBuild-<n>.tar.gz` under [Releases](../../releases)
-(marked as pre-releases). They hold the same program, drawn with Vulkan; the
-Steam Deck one comes with settings and instructions for the Deck.
+There is a test build for desktop Linux,
+`RidgeRacer6-Linux-TestBuild-<n>.tar.gz`, under [Releases](../../releases)
+(marked as a pre-release). It is drawn with Vulkan. A Steam Deck package of
+the same program, `RidgeRacer6-SteamDeck-TestBuild-<n>.tar.gz`, with settings
+and instructions for the Deck, is being tested on a Deck and will be added to
+the same release.
 
-They are experimental. Test build 02 was tried once on a Steam Deck: it
-started, but drew the track black, which test build 03 fixes. Build 03 itself
-has only been run on a machine without a graphics card, with software
-rendering, so expect problems, and please report what you find.
+It is experimental. Test build 02 was tried once on a Steam Deck: it started,
+but drew the track black, which test build 03 fixes. Build 03 itself has only
+been run on a machine without a graphics card, with software rendering, so
+expect problems, and please report what you find.
 
 On a Steam Deck, add the game to Steam and start it from there: only then do
 the Deck's buttons work as a controller.
