@@ -130,9 +130,78 @@ bool WriteFileUtf8(const std::wstring& path, const std::string& data) {
 
 struct Entry {
   std::string key;
-  std::string value;  // without quotes
+  std::string value;  // decoded: without quotes and escapes
   bool quoted = false;
+  std::string raw;    // the value as it was in the file; empty once changed here
 };
+
+void AppendUtf8(std::string* out, uint32_t c) {
+  if (c < 0x80) {
+    *out += (char)c;
+  } else if (c < 0x800) {
+    *out += (char)(0xC0 | (c >> 6));
+    *out += (char)(0x80 | (c & 0x3F));
+  } else if (c < 0x10000) {
+    *out += (char)(0xE0 | (c >> 12));
+    *out += (char)(0x80 | ((c >> 6) & 0x3F));
+    *out += (char)(0x80 | (c & 0x3F));
+  } else {
+    *out += (char)(0xF0 | (c >> 18));
+    *out += (char)(0x80 | ((c >> 12) & 0x3F));
+    *out += (char)(0x80 | ((c >> 6) & 0x3F));
+    *out += (char)(0x80 | (c & 0x3F));
+  }
+}
+
+// A TOML basic string ("..."), starting at v[0]. Sets *value to the decoded
+// text and returns the length of the string in v, quotes included (0 if it
+// does not close on this line).
+size_t ReadBasicString(const std::string& v, std::string* value) {
+  value->clear();
+  for (size_t i = 1; i < v.size(); ++i) {
+    char c = v[i];
+    if (c == '"') return i + 1;
+    if (c != '\\' || i + 1 >= v.size()) {
+      *value += c;
+      continue;
+    }
+    char e = v[++i];
+    switch (e) {
+      case 'n': *value += '\n'; break;
+      case 't': *value += '\t'; break;
+      case 'r': *value += '\r'; break;
+      case 'b': *value += '\b'; break;
+      case 'f': *value += '\f'; break;
+      case 'u':
+      case 'U': {
+        size_t digits = e == 'u' ? 4 : 8;
+        if (i + digits >= v.size()) return 0;
+        AppendUtf8(value, (uint32_t)strtoul(v.substr(i + 1, digits).c_str(), nullptr, 16));
+        i += digits;
+        break;
+      }
+      default: *value += e; break;  // \\ and \"
+    }
+  }
+  return 0;
+}
+
+std::string QuoteBasicString(const std::string& text) {
+  std::string out = "\"";
+  for (unsigned char c : text) {
+    if (c == '"' || c == '\\') {
+      out += '\\';
+      out += (char)c;
+    } else if (c < 0x20 || c == 0x7F) {
+      char buf[8];
+      snprintf(buf, sizeof(buf), "\\u%04X", c);
+      out += buf;
+    } else {
+      out += (char)c;
+    }
+  }
+  return out + "\"";
+}
 
 class Settings {
  public:
@@ -150,23 +219,39 @@ class Settings {
       Entry e;
       e.key = Trim(line.substr(0, eq));
       std::string v = Trim(line.substr(eq + 1));
-      if (!v.empty() && v[0] == '"') {
-        size_t close = v.find('"', 1);
+      if (!v.empty() && v[0] == '"' && v.compare(0, 3, "\"\"\"") != 0) {
+        size_t length = ReadBasicString(v, &e.value);
+        e.raw = length ? v.substr(0, length) : v;
+        e.quoted = true;
+      } else if (!v.empty() && v[0] == '\'' && v.compare(0, 3, "\'\'\'") != 0) {
+        // A literal string: no escapes at all.
+        size_t close = v.find('\'', 1);
         e.value = v.substr(1, close == std::string::npos ? std::string::npos : close - 1);
+        e.raw = close == std::string::npos ? v : v.substr(0, close + 1);
         e.quoted = true;
       } else {
+        // A number, true/false, or something this simple reader does not
+        // know (kept as it is).
         size_t hash = v.find('#');
         if (hash != std::string::npos) v = Trim(v.substr(0, hash));
         e.value = v;
+        e.raw = v;
       }
-      if (!e.key.empty()) Set(e.key, e.value, e.quoted);
+      if (!e.key.empty()) {
+        Set(e.key, e.value, e.quoted);
+        for (Entry& stored : entries_) {
+          if (stored.key == e.key) stored.raw = e.raw;
+        }
+      }
     }
   }
 
   std::string Serialize(const std::string& header) const {
     std::string out = header;
     for (const Entry& e : entries_) {
-      out += e.key + " = " + (e.quoted ? "\"" + e.value + "\"" : e.value) + "\n";
+      // Unchanged settings are written back exactly as they were read.
+      const std::string value = !e.raw.empty() ? e.raw : e.quoted ? QuoteBasicString(e.value) : e.value;
+      out += e.key + " = " + value + "\n";
     }
     return out;
   }
@@ -195,12 +280,13 @@ class Settings {
   void Set(const std::string& key, const std::string& value, bool quoted) {
     for (Entry& e : entries_) {
       if (e.key == key) {
+        if (e.value != value || e.quoted != quoted) e.raw.clear();
         e.value = value;
         e.quoted = quoted;
         return;
       }
     }
-    entries_.push_back(Entry{key, value, quoted});
+    entries_.push_back(Entry{key, value, quoted, ""});
   }
   void SetBool(const std::string& key, bool v) { Set(key, v ? "true" : "false", false); }
   void SetInt(const std::string& key, int v) { Set(key, std::to_string(v), false); }
@@ -740,11 +826,12 @@ bool RunAndWait(std::wstring command, const std::wstring& cwd, DWORD* exit_code,
   return true;
 }
 
-// Where the game keeps saves and caches: Documents\rr6_recomp unless the
-// settings file names another place. Empty if it cannot be worked out.
+// Where the game keeps saves and caches: Documents\rr6_recomp. Empty if it
+// cannot be worked out. A user_data_root line in the settings file does not
+// move it: the SDK picks this folder before it reads that file, so only a
+// --user_data_root on the command line would, and the launcher passes none.
 std::wstring UserDataRoot() {
-  std::wstring root = Widen(app.settings.Get("user_data_root", ""));
-  if (!root.empty()) return root;
+  std::wstring root;
   PWSTR documents = nullptr;
   if (FAILED(SHGetKnownFolderPath(FOLDERID_Documents, 0, nullptr, &documents)) || !documents) {
     return L"";
@@ -803,9 +890,10 @@ void RemoveSaveThumbnails(const std::wstring& root) {
 // (recognised by its tools folder) or a copy was started and not finished.
 bool GameFilesReady() {
   if (!FileExists(app.game_data + L"\\default.xex")) return false;
+  // An unfinished copy wins over everything else in the folder.
+  if (FileExists(app.game_data + L"\\" + Widen(disc::kCopyingMarker))) return false;
   if (FileExists(app.game_data + L"\\" + Widen(disc::kReadyMarker))) return true;
-  return !FileExists(app.game_data + L"\\" + Widen(disc::kCopyingMarker)) &&
-         !FileExists(app.dir + L"tools\\prepare-game.ps1");
+  return !FileExists(app.dir + L"tools\\prepare-game.ps1");
 }
 
 void Play() {
@@ -1638,6 +1726,10 @@ void CopyFinished(disc::Result result, const std::string& detail) {
       problem = L"The disc image contains a file name that cannot be used on this PC, so nothing was "
                 L"copied.";
       break;
+    case disc::Result::kDamaged:
+      problem = L"The disc image is damaged: its list of files is broken, so nothing was copied. Make "
+                L"a new copy of the disc image.";
+      break;
     case disc::Result::kWrongVersion:
       problem = L"This is a different game, or a different version of Ridge Racer 6, than this build was "
                 L"made for. It only works with the USA disc (title ID 4E4D07D3).\n\n"
@@ -2251,7 +2343,8 @@ void AddDlc(std::vector<std::wstring> paths) {
   CreateDirectoryW((app.dir + L"logs").c_str(), nullptr);
   std::wstring cmd = L"\"" + app.game_exe + L"\" --game_data_root \"" + app.game_data +
                      L"\" --gpu_plugin=xenos --fullscreen=false --log_file \"" + app.dir +
-                     L"logs\\dlc-install.log\" \"--rr6_install_content=" + list + L"\"";
+                     L"logs\\dlc-install.log\" \"--rr6_install_result=" + app.dir +
+                     L"logs\\dlc-install-result.txt\" \"--rr6_install_content=" + list + L"\"";
   if (list.empty() || cmd.size() > 30000) {
     MessageBoxW(app.window,
                 L"That is too many files to pass on at once. Use \"Add a folder...\" and choose the "
@@ -2259,7 +2352,7 @@ void AddDlc(std::vector<std::wstring> paths) {
                 L"Ridge Racer 6", MB_ICONINFORMATION);
     return;
   }
-  std::wstring result_path = root + L"\\dlc-install-result.txt";
+  std::wstring result_path = app.dir + L"logs\\dlc-install-result.txt";
   DeleteFileW(result_path.c_str());
 
   SetStatus(L"Adding downloadable content...");
@@ -2284,9 +2377,12 @@ void AddDlc(std::vector<std::wstring> paths) {
     return;
   }
   int added = 0, not_added = 0;
+  bool complete = false;
   std::wstring added_names, problems;
-  for (const std::string& line : SplitOn(text, '\n')) {
+  const std::vector<std::string> lines = SplitOn(text, '\n');
+  for (const std::string& line : lines) {
     std::vector<std::string> fields = SplitOn(Trim(line), '\t');
+    if (fields.size() == 4 && fields[0] == "done") complete = true;
     if (fields.size() < 3) continue;
     if (fields[0] == "installed") {
       ++added;
@@ -2296,8 +2392,16 @@ void AddDlc(std::vector<std::wstring> paths) {
       problems += L"\n    " + Widen(fields[2]) + L": " + Widen(fields[1]);
     }
   }
+  // The game writes the whole file at once, ending with a "done" line. A file
+  // without one means it was cut off.
+  if (lines.empty() || Trim(lines[0]) != "RR6-DLC-INSTALL 1") complete = false;
   wchar_t head[160];
-  if (not_added == 0) {
+  if (!complete) {
+    swprintf(head, 160, L"Adding content did not finish (%d added before it stopped).", added);
+    problems += L"\n    The game program stopped before it was done. The log of this attempt is "
+                L"dlc-install.log in the logs folder (Troubleshooting tab, \"Open logs folder\").";
+    ++not_added;
+  } else if (not_added == 0) {
     swprintf(head, 160, added == 1 ? L"%d content package added." : L"%d content packages added.", added);
   } else {
     swprintf(head, 160, L"%d added, %d not added.", added, not_added);

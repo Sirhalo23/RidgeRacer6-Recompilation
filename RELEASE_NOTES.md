@@ -11,6 +11,22 @@ file: 28 of 71 scanners for the SDK's own build of it in v0.1.0 and v0.1.2,
 repository are not flagged. Details and how to check the file:
 [If your antivirus flags rexruntime.dll](README.md#if-your-antivirus-flags-rexruntimedll).
 
+## Not released yet
+
+- Adding downloadable content is safer: each package's list of files is
+  checked before anything is written (a doctored package could otherwise
+  write files outside the content folder), files are unpacked with every
+  write checked into a separate folder and only then moved into place, and a
+  package added again replaces the old copy only once the new one is
+  complete. A folder search that could not look everywhere says so.
+- Copying the game from the disc image refuses a damaged image instead of
+  copying the part that could be read, and an interrupted copy made with
+  "Play without the launcher" is no longer taken for a finished one.
+- The launcher (version 1.4) keeps settings it does not change exactly as they
+  were.
+- Linux: `--install-dlc` is no longer lost when the script reopens itself in a
+  terminal on the first start.
+
 ## v0.1.4 and Linux test build 05 (2026-10-07)
 
 Inside the Windows zip it calls itself "test build 08".

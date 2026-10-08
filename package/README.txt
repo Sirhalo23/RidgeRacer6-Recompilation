@@ -127,7 +127,7 @@ can add it to the game.
 
 - You need the content files from your own Xbox 360's storage. They are in
   the folder Content\0000000000000000\4E4D07D3\00000002 and have long names
-  without an extension. A PC cannot read an Xbox 360 drive directly; a reader
+  without an extension; keep those names. A PC cannot read an Xbox 360 drive directly; a reader
   program for the console's disk format is needed to copy them off.
 - On the DLC page press "Add content files..." and choose them, or
   "Add a folder..." for a folder that holds them. The folders inside it are

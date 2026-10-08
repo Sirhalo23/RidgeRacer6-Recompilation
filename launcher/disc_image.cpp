@@ -160,12 +160,36 @@ struct Entry {
   uint32_t size;
 };
 
+std::string Lower(std::string text) {
+  for (char& c : text) {
+    if (c >= 'A' && c <= 'Z') c = (char)(c - 'A' + 'a');
+  }
+  return text;
+}
+
+bool EndsWith(const std::string& text, const char* end) {
+  const size_t n = strlen(end);
+  return text.size() >= n && text.compare(text.size() - n, n, end) == 0;
+}
+
+// A name that can be written as it is on Windows and Linux, and that cannot
+// be mistaken for one of the names this copy uses itself (a file's ".part"
+// while it is being written, and the two markers).
 bool SafeName(const std::string& name) {
   if (name.empty() || name == "." || name == "..") return false;
   for (unsigned char c : name) {
     if (c < 0x20 || c >= 0x7F || strchr("\\/:*?\"<>|", c)) return false;
   }
-  return name.back() != '.' && name.back() != ' ';
+  if (name.back() == '.' || name.back() == ' ') return false;
+  const std::string lower = Lower(name);
+  if (EndsWith(lower, ".part") || lower == kCopyingMarker || lower == kReadyMarker) return false;
+  const std::string base = lower.substr(0, lower.find('.'));
+  if (base == "con" || base == "prn" || base == "aux" || base == "nul") return false;
+  if (base.size() == 4 && (base.compare(0, 3, "com") == 0 || base.compare(0, 3, "lpt") == 0) &&
+      base[3] >= '0' && base[3] <= '9') {
+    return false;
+  }
+  return true;
 }
 
 struct Image {
@@ -179,7 +203,9 @@ struct Image {
   }
 };
 
-Result ReadTree(Image* image) {
+// Reads the whole directory tree. A broken tree is refused rather than read in
+// part: a copy of only the files that could be reached would look complete.
+Result ReadTree(Image* image, Progress* progress) {
   uint8_t header[28];
   bool found = false;
   for (uint64_t offset : kPartitionOffsets) {
@@ -195,15 +221,21 @@ Result ReadTree(Image* image) {
   struct Folder {
     uint32_t sector, size;
     std::string path;
+    int depth;
   };
-  std::vector<Folder> pending = {{U32(header + 20), U32(header + 24), ""}};
+  std::vector<Folder> pending = {{U32(header + 20), U32(header + 24), "", 0}};
+  std::set<uint32_t> folder_sectors;  // each folder's table is read once
+  std::set<std::string> paths;        // as Windows compares them: without regard to case
   int folders_read = 0;
   while (!pending.empty()) {
+    if (progress->cancel) return Result::kCancelled;
     Folder folder = pending.back();
     pending.pop_back();
     if (folder.size == 0) continue;
     // Real discs have a handful of small tables; anything else is not a disc.
     if (folder.size > 16u * 1024 * 1024 || ++folders_read > 10000) return Result::kNotGameDisc;
+    // A folder whose table was read already is a folder inside itself.
+    if (!folder_sectors.insert(folder.sector).second || folder.depth > 32) return Result::kDamaged;
     std::vector<uint8_t> table(folder.size);
     if (!ReadAt(image->file, image->base + (uint64_t)folder.sector * kSector, table.data(), table.size())) {
       return Result::kReadError;
@@ -213,7 +245,9 @@ Result ReadTree(Image* image) {
     while (!nodes.empty()) {
       size_t o = nodes.back();
       nodes.pop_back();
-      if (o + 14 > table.size() || !seen.insert(o).second) continue;
+      // Every link has to lead to an entry of this table that was not reached
+      // before; anything else means the list of files is broken.
+      if (o + 14 > table.size() || !seen.insert(o).second) return Result::kDamaged;
       const uint8_t* e = table.data() + o;
       const uint16_t left = U16(e), right = U16(e + 2);
       const uint32_t sector = U32(e + 4), size = U32(e + 8);
@@ -223,9 +257,12 @@ Result ReadTree(Image* image) {
       std::string name((const char*)e + 14, name_length);
       if (!SafeName(name)) image->unsafe_names = true;  // reported once the game is known to be the right one
       std::string path = folder.path.empty() ? name : folder.path + "/" + name;
+      if (path.size() > 1000) return Result::kDamaged;
+      // Two names that differ only in case would end up as one file on Windows.
+      if (!paths.insert(Lower(path)).second) image->unsafe_names = true;
       if (attributes & 0x10) {
         image->folders.push_back(path);
-        pending.push_back({sector, size, path});
+        pending.push_back({sector, size, path, folder.depth + 1});
       } else {
         image->files.push_back({path, sector, size});
       }
@@ -262,7 +299,7 @@ Result Extract(const Options& options, Progress* progress, std::string* detail) 
   Image image;
   image.file = OpenFile(options.image, false);
   if (!image.file) return Result::kCannotOpen;
-  Result tree = ReadTree(&image);
+  Result tree = ReadTree(&image, progress);
   if (tree != Result::kOk) return tree;
 
   // In the order they lie on the disc.
@@ -285,6 +322,7 @@ Result Extract(const Options& options, Progress* progress, std::string* detail) 
     uint64_t remaining = executable->size;
     if (!SeekTo(image.file, image.base + (uint64_t)executable->sector * kSector)) return Result::kReadError;
     while (remaining > 0) {
+      if (progress->cancel) return Result::kCancelled;
       size_t want = (size_t)std::min<uint64_t>(block.size(), remaining);
       if (fread(block.data(), 1, want, image.file) != want) return Result::kReadError;
       hash.Update(block.data(), want);

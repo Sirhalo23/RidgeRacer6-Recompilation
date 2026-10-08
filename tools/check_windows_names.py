@@ -23,6 +23,19 @@ import sys
 # Defined as macros by MinGW's own C library headers, not by the Windows SDK
 # (pthread.h and friends), or switched off for this project (NOMINMAX).
 NOT_ON_WINDOWS_SDK = {'min', 'max'}
+# A few rarely used headers (sehmap.h, nmsupp.h) turn C++ keywords such as
+# try into Microsoft's structured exception handling. Nothing includes them
+# unless asked to, and a keyword cannot be renamed anyway.
+CXX_KEYWORDS = {
+    'alignas', 'alignof', 'and', 'asm', 'auto', 'bool', 'break', 'case', 'catch', 'char', 'class',
+    'const', 'consteval', 'constexpr', 'constinit', 'const_cast', 'continue', 'decltype', 'default',
+    'delete', 'do', 'double', 'dynamic_cast', 'else', 'enum', 'explicit', 'export', 'extern', 'false',
+    'float', 'for', 'friend', 'goto', 'if', 'inline', 'int', 'long', 'mutable', 'namespace', 'new',
+    'noexcept', 'not', 'nullptr', 'operator', 'or', 'private', 'protected', 'public', 'register',
+    'reinterpret_cast', 'return', 'short', 'signed', 'sizeof', 'static', 'static_assert',
+    'static_cast', 'struct', 'switch', 'template', 'this', 'thread_local', 'throw', 'true', 'try',
+    'typedef', 'typeid', 'typename', 'union', 'unsigned', 'using', 'virtual', 'void', 'volatile',
+    'while', 'xor'}
 SKIP_HEADERS = ('pthread', 'sched.h', 'semaphore.h', 'unistd.h', 'io.h', 'stdio.h', 'stdlib.h', 'string.h',
                 'time.h', 'wchar.h', 'math.h', 'process.h', 'direct.h', 'sys', 'float.h', 'errno.h', 'signal.h',
                 'ctype.h', 'malloc.h', 'tgmath.h', 'complex.h', 'inttypes.h', 'conio.h', 'assert.h', 'locale.h',
@@ -72,7 +85,8 @@ def main():
     for path in args:
         seen = set()
         for number, name in names_in(path):
-            if name in macros and name not in NOT_ON_WINDOWS_SDK and not name.isupper() \
+            if name in macros and name not in NOT_ON_WINDOWS_SDK and name not in CXX_KEYWORDS \
+                    and not name.isupper() \
                     and not name.startswith('_') and (name, number) not in seen:
                 seen.add((name, number))
                 print('%s:%d: "%s" is a macro in the Windows headers (%s)' % (path, number, name, macros[name]))

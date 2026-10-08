@@ -141,6 +141,10 @@ int main(int argc, char** argv) {
       std::fprintf(stderr, "The disc image contains a file name that cannot be used here, so nothing "
                            "was copied.\n");
       break;
+    case disc::Result::kDamaged:
+      std::fprintf(stderr, "The disc image is damaged: its list of files is broken, so nothing was "
+                           "copied.\nMake a new copy of the disc image.\n");
+      break;
     case disc::Result::kWrongVersion:
       std::fprintf(stderr, "This is a different game, or a different version of Ridge Racer 6, than "
                            "this build was made for.\nIt only works with the USA disc (title ID "

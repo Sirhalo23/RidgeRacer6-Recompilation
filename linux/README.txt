@@ -118,7 +118,7 @@ If you own downloadable content for Ridge Racer 6, you can add it:
 
 You need the content files from your own Xbox 360's storage. They are in the
 folder Content/0000000000000000/4E4D07D3/00000002 and have long names without
-an extension. Give one file, or a folder that holds them; the folders inside
+an extension; keep those names. Give one file, or a folder that holds them; the folders inside
 it are searched too, and the option can be repeated. A game window opens for a moment and closes again, and the script
 says what was added. Only content for Ridge Racer 6 is accepted.
 
