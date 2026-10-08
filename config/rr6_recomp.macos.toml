@@ -1,0 +1,24 @@
+# Native macOS defaults. F4 opens settings, F3 shows frame-rate statistics.
+input_backend = "sdl"
+use_fuzzy_alpha_epsilon = true
+resolution_scale = 1
+vsync = true
+
+# Keyboard input can coexist with controllers. Controllers retain analog
+# steering and triggers; SDL handles connection changes and supported rumble.
+mnk_mode = true
+mnk_mouse = false
+keybind_lstick_left = "Left,A"
+keybind_lstick_right = "Right,D"
+keybind_lstick_up = "Up,W"
+keybind_lstick_down = "Down,S"
+keybind_right_trigger = "Up,W"
+keybind_left_trigger = "Down,S"
+keybind_a = "Space"
+keybind_b = "Backspace,B"
+keybind_x = "X"
+keybind_y = "Y"
+keybind_right_shoulder = "E"
+keybind_left_shoulder = "Q"
+keybind_start = "Return,P"
+keybind_back = "Tab"

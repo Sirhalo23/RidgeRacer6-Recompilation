@@ -115,3 +115,78 @@ of the machine it was built on, whichever is newer.
 
 `tools/linux-rig/README.md` describes how the game is run without a graphics
 card for automated checks.
+
+## macOS
+
+The native build uses the SDK's SDL3 window, audio and controller backends,
+with Vulkan translated to Metal by MoltenVK. Both `mac-arm64-release` (Apple
+Silicon) and `mac-amd64-release` (Intel) presets are available. Build on the
+Mac you will run on.
+
+Install Xcode 16 or newer with its command-line tools, CMake 3.25 or newer,
+Ninja and Python 3. With Homebrew: `brew install cmake ninja python`.
+
+Place a ReXGlue SDK v0.10.0 source checkout next to this repository:
+
+    git clone --branch v0.10.0 --recurse-submodules https://github.com/rexglue/rexglue-sdk.git ../rexglue-sdk
+
+Apply the companion SDK patch before building (the unpatched v0.10.0
+macOS presentation path can stretch a single pixel across the window):
+
+    git -C ../rexglue-sdk apply --index "$PWD/patches/rexglue-sdk-macos.patch"
+    git -C ../rexglue-sdk submodule update --init --recursive
+
+The patch fixes SDK source-build header/runtime staging and pins MoltenVK
+to upstream commit `4d74f17e0bc44de5db4b6778313c90258dcce634`, which fixes
+swapchain recreation leaving the drawable at 1x1 pixels. See the
+[upstream fix](https://github.com/KhronosGroup/MoltenVK/commit/4d74f17e0bc44de5db4b6778313c90258dcce634).
+Apply it once to a clean v0.10.0 SDK checkout. An SDK that already includes
+these changes does not need the patch again.
+
+The SDK builds and stages its Vulkan loader and MoltenVK. From this checkout:
+
+    ./build-macos.sh "/path/to/Ridge Racer 6 (USA).iso"
+    ./run-macos.sh
+
+The ISO argument is optional if the extracted disc already exists in
+`../game`. The script verifies the executable hash, builds the recompiler,
+generates the guest C++, reconfigures CMake to include those sources, and
+builds the game. `REXSDK_DIR` selects another SDK source location;
+`RR6_BUILD_JOBS` controls parallel compilation (default 8). `CMAKE` and
+`PYTHON` can select tools installed outside `PATH`.
+
+The app bundle is `out/build/mac-arm64-release/rr6_recomp.app` (or
+`mac-amd64-release` on Intel). Use the launch script to provide the game-data
+path. The executable and runtime libraries are inside `Contents/MacOS`.
+First build copies macOS defaults to
+`rr6_recomp.toml` beside the executable; later builds preserve your settings.
+The launch script stores saves and caches in `out/userdata`, and writes
+`logs/run-macos.log`. F4 opens settings and F3 opens statistics. Initial
+rendering scale is native 720p. The stock SDK uses the same texture LOD bias
+workaround as Linux (see above).
+
+### Controllers on macOS
+
+SDL3 handles analog sticks, analog triggers, buttons, hotplug and rumble
+where the controller and macOS driver support it. Pair an Xbox or PS4
+DualShock 4 controller in macOS Bluetooth settings or connect it by USB.
+SDL maps it to the Xbox buttons the game expects; PlayStation Cross is A
+and Circle is B. Keyboard controls also work (Space confirms, Return
+starts/pauses, arrows steer and navigate).
+
+The build stages `gamecontrollerdb.txt`. The launch script passes its
+absolute path so mappings work regardless of the launching directory.
+For diagnostics, run `./run-macos.sh --rr6_log_input=true`; the log records
+SDL device detection and changes to player 1's guest input. Hardware
+verification should cover steering, both triggers, menu buttons,
+unplug/reconnect and vibration during a race. Check USB and Bluetooth
+separately before claiming a controller model has been verified.
+
+### Verification status
+
+The ARM64 Release build has been tested on an Apple M4 Max. Native audio
+and Bluetooth DualShock 4 menu input have been observed. Stable Pac-Man
+presentation was observed with the drawable fix applied to the previous
+MoltenVK pin. The final updated pin builds successfully but still needs a
+visible-launch recheck. Intel builds, race rendering, analog steering/triggers,
+controller reconnect, rumble and Xbox hardware still require verification.
