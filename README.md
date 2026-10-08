@@ -52,7 +52,7 @@ not ask for administrator rights.
 To check that the file is the one published here, compare its SHA-256 with
 `SHA256SUMS.txt` on the release page. In PowerShell, with the file's name:
 
-    Get-FileHash .\RidgeRacer6-PC-v0.1.3.zip
+    Get-FileHash .\RidgeRacer6-PC-v0.1.4.zip
 
 If your antivirus names a threat instead of giving one of the warnings above,
 see the next section.
@@ -81,7 +81,9 @@ public build workflow, and far fewer scanners flag it. On
 The eight are one verdict, `Gen:Variant.Yogi.85276`, given by Bitdefender and
 by seven products that use its engine (ALYac, Arcabit, CTX, Emsisoft, eScan,
 GData, VIPRE). The zip's eight flags are the same eight. A new file's result
-can change during its first days; the links show the current state.
+can change during its first days; the links show the current state. Later
+releases contain the same `rexruntime.dll` until the SDK changes; the
+checksum below tells you which one you have.
 
 **v0.1.0 and v0.1.2** contain the SDK's own build of the file, copied byte
 for byte out of its download (`rexglue-sdk-0.10.0-win-amd64.zip` on the SDK's
@@ -109,7 +111,8 @@ That is an explanation, not a guarantee. What you can check yourself:
 
       Get-FileHash .\bin\rexruntime.dll
 
-  v0.1.3: `172A80FA46F85B2C66E3B517C89C3F8A3CDE298EC7DD4CFC4955BA74FB846E13`,
+  v0.1.3 and v0.1.4:
+  `172A80FA46F85B2C66E3B517C89C3F8A3CDE298EC7DD4CFC4955BA74FB846E13`,
   the file in `rexglue-sdk-0.10.0.100-win-amd64.zip` on the fork's
   [release page](https://github.com/Sirhalo23/rexglue-sdk/releases/tag/v0.10.0.100).
   v0.1.0 and v0.1.2:
@@ -141,10 +144,10 @@ and instructions for the Deck, is being tested on a Deck and will be added to
 the same release.
 
 It is experimental. Test build 02 was tried once on a Steam Deck: it started,
-but drew the track black. Builds 03 and 04 fix that, 04 in the graphics code
-itself (it is made with our fork of the SDK). Both have only been run on a
-machine without a graphics card, with software rendering, so expect problems,
-and please report what you find.
+but drew the track black. Builds 03 and later fix that, from 04 on in the
+graphics code itself (they are made with our fork of the SDK). They have only
+been run on a machine without a graphics card, with software rendering, so
+expect problems, and please report what you find.
 
 On a Steam Deck, add the game to Steam and start it from there: only then do
 the Deck's buttons work as a controller.

@@ -7,12 +7,15 @@ data: you need your own Ridge Racer 6 (USA) disc image (.iso).
 
 This build is experimental. Build 02 was tried once on a Steam Deck: it
 started, but the track was drawn black, and the controls were wrong because it
-had been started from outside Steam. Builds 03 and 04 deal with both: the
-black track is fixed (in build 04 in the graphics code itself, which is now
+had been started from outside Steam. Builds 03 and later deal with both: the
+black track is fixed (from build 04 on in the graphics code itself, which is
 our own build of the ReXGlue SDK; checked with software rendering, not yet on
 a Deck), and the start script says so when it is not started from Steam. How
 fast it runs on a Deck is not known yet. Please report what you see (see
 REPORTING A PROBLEM).
+
+New in build 05: downloadable content you own can be added (see DOWNLOADABLE
+CONTENT below).
 
 
 WHAT YOU NEED

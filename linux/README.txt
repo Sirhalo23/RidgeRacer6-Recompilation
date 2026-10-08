@@ -11,8 +11,11 @@ and an earlier build was tried once on a Steam Deck. Nobody has yet played it
 on a desktop graphics card: you may be the first. Please report what you see
 (see REPORTING A PROBLEM).
 
-New in build 04: the black track of builds 01 and 02 is fixed where it came
-from, in the graphics code this build uses, which is now our own build of the
+New in build 05: downloadable content you own can be added (see DOWNLOADABLE
+CONTENT below).
+
+Since build 04, the black track of builds 01 and 02 is fixed where it came
+from, in the graphics code this build uses, which is our own build of the
 ReXGlue SDK. Build 03 got around it by switching off the game's texture
 sharpening; that is back, so the road ahead is as sharp as in the Windows
 version.

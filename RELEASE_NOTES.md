@@ -11,16 +11,22 @@ file: 28 of 71 scanners for the SDK's own build of it in v0.1.0 and v0.1.2,
 repository are not flagged. Details and how to check the file:
 [If your antivirus flags rexruntime.dll](README.md#if-your-antivirus-flags-rexruntimedll).
 
-## Not yet released
+## v0.1.4 and Linux test build 05 (2026-10-07)
+
+Inside the Windows zip it calls itself "test build 08".
 
 - Downloadable content: your own content packages can be added. Windows: the
-  launcher's new DLC page. Linux and Steam Deck:
-  `./ridge-racer-6.sh --install-dlc FILE-OR-FOLDER`. The game program checks
-  each package (it must be downloadable content for this game), unpacks it
-  into the save data folder and closes again. On Windows, five downloadable
-  music tracks were added and then chosen and played in a race ("Player
-  Disc" under Change BGM). The downloadable car designs are untried, and on
-  Linux only stand-in packages have been through it.
+  launcher's new DLC page (the launcher is now version 1.3). Linux and Steam
+  Deck: `./ridge-racer-6.sh --install-dlc FILE-OR-FOLDER`. The game program
+  checks each package (it must be downloadable content for this game),
+  unpacks it into the save data folder and closes again. A folder is searched
+  together with the folders inside it.
+- On Windows, five downloadable music tracks were added and then chosen and
+  played in a race ("Player Disc" under Change BGM). The downloadable car
+  designs are untried, and on Linux only stand-in packages have been through
+  it.
+- The runtime files are the same as in v0.1.3 (our fork of the SDK,
+  v0.10.0.100).
 
 ## v0.1.3 (2026-10-07)
 
