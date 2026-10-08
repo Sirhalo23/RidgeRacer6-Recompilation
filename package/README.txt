@@ -138,8 +138,11 @@ can add it to the game.
   not Ridge Racer 6 content is passed over.
 - The game looks for added content each time it starts. To remove content,
   delete its folder ("Open content folder" on the DLC page).
-- This is new and has only been tried with stand-in files made for testing.
-  If your content does not show up in the game, please report it.
+- Added music appears under "Change BGM" on the screen before a race, as
+  "Player Disc".
+- This is new. Five of the downloadable music tracks have been added and
+  played this way; the downloadable car designs have not been tried. If your
+  content does not show up in the game, please report it.
 
 
 WHAT TO TEST

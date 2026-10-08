@@ -121,8 +121,10 @@ says what was added. Only content for Ridge Racer 6 is accepted.
 
 The game looks for added content each time it starts. It is unpacked into
 ~/.local/share/rr6_recomp/0000000000000000/4E4D07D3/00000002; to remove
-content, delete its folder there. This is new and has only been tried with
-stand-in files made for testing.
+content, delete its folder there. Added music appears under "Change BGM" on
+the screen before a race, as "Player Disc". This is new: real content has
+been added and played on Windows, on Linux only stand-in files made for
+testing.
 
 
 WHERE THINGS ARE KEPT

@@ -246,9 +246,11 @@ unpacks it into the save data folder, and closes again; the game looks for
 added content each time it starts. To remove content, delete its folder
 (the launcher's **Open content folder**).
 
-This is new and has only been tried with stand-in packages made for testing:
-unpacking works and the game finds what was unpacked, but no real content
-package has been through it yet. Reports are welcome.
+This is new. On Windows, five of the game's downloadable music tracks were
+added this way and then chosen and played in a race (the game lists them as
+"Player Disc" under Change BGM). The downloadable car designs have not been
+tried, and on Linux only stand-in packages made for testing have. Reports are
+welcome.
 
 ## Known limitations
 

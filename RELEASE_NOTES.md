@@ -17,9 +17,10 @@ repository are not flagged. Details and how to check the file:
   launcher's new DLC page. Linux and Steam Deck:
   `./ridge-racer-6.sh --install-dlc FILE-OR-FOLDER`. The game program checks
   each package (it must be downloadable content for this game), unpacks it
-  into the save data folder and closes again. Tried with stand-in packages
-  only: unpacking works and the game lists what was unpacked. No real content
-  package has been through it yet.
+  into the save data folder and closes again. On Windows, five downloadable
+  music tracks were added and then chosen and played in a race ("Player
+  Disc" under Change BGM). The downloadable car designs are untried, and on
+  Linux only stand-in packages have been through it.
 
 ## v0.1.3 (2026-10-07)
 

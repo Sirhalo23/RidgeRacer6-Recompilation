@@ -294,10 +294,13 @@ First real packages (the owner's, 2026-10-07, Windows, built against the
 fork's SDK): five `LIVE` packages of 32 to 59 MB, each one `.wav` file,
 described in their headers as additional background music ("01: Highride",
 "02: Warp Trooper", "03: Bassrider", "04: Pulse Phaze", "33: Mars Landing").
-All five installed, and the launcher listed them. Still open: whether the
-game uses them. In the two minutes it ran afterwards it created the content
-list and opened no package; the place to look is "Change BGM" on the screen
-before a race. The game creates the content list at the main menu, after the
+All five installed, and the launcher listed them. The game uses them: under
+"Change BGM" on the screen before a race they appear as a "Player Disc" with
+the five tracks, numbered 1 to 5, and one was chosen and heard during a race.
+So the content list, the licence bits and the reading of a package's file
+all work with real content on Direct3D 12 / Windows. Not tried: the
+downloadable car designs (36, free, per the fan wiki), real content on Linux,
+and the subfolder search on Windows. The game creates the content list at the main menu, after the
 save has loaded; with the stand-ins it opened nothing afterwards.
 
 ## Display settings

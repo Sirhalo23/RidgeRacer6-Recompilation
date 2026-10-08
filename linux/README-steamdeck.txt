@@ -122,8 +122,10 @@ an extension. Give one file, or a folder that holds them (the folders inside
 it are searched too). A game window opens
 for a moment and closes again, and the script says what was added. To remove
 content, delete its folder in
-~/.local/share/rr6_recomp/0000000000000000/4E4D07D3/00000002. This is new and
-has only been tried with stand-in files made for testing.
+~/.local/share/rr6_recomp/0000000000000000/4E4D07D3/00000002. Added music
+appears under "Change BGM" on the screen before a race, as "Player Disc". This
+is new: real content has been added and played on Windows, on Linux only
+stand-in files made for testing.
 
 
 WHERE THINGS ARE KEPT
