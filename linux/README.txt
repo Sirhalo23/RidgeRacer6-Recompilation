@@ -11,8 +11,11 @@ and an earlier build was tried once on a Steam Deck. Nobody has yet played it
 on a desktop graphics card: you may be the first. Please report what you see
 (see REPORTING A PROBLEM).
 
-New in build 04: the black track of builds 01 and 02 is fixed where it came
-from, in the graphics code this build uses, which is now our own build of the
+New in build 05: downloadable content you own can be added (see DOWNLOADABLE
+CONTENT below).
+
+Since build 04, the black track of builds 01 and 02 is fixed where it came
+from, in the graphics code this build uses, which is our own build of the
 ReXGlue SDK. Build 03 got around it by switching off the game's texture
 sharpening; that is back, so the road ahead is as sharp as in the Windows
 version.
@@ -105,6 +108,26 @@ one, a pop-up appears with a sound, and it is remembered.
 - Your own sound: put a file named achievement.wav into this folder (next to
   ridge-racer-6.sh) and the game plays it instead of its own chime.
 - Progress is kept with your save data, in ~/.local/share/rr6_recomp.
+
+
+DOWNLOADABLE CONTENT
+--------------------
+If you own downloadable content for Ridge Racer 6, you can add it:
+
+  ./ridge-racer-6.sh --install-dlc FILE-OR-FOLDER
+
+You need the content files from your own Xbox 360's storage. They are in the
+folder Content/0000000000000000/4E4D07D3/00000002 and have long names without
+an extension. Give one file, or a folder that holds them; the folders inside
+it are searched too, and the option can be repeated. A game window opens for a moment and closes again, and the script
+says what was added. Only content for Ridge Racer 6 is accepted.
+
+The game looks for added content each time it starts. It is unpacked into
+~/.local/share/rr6_recomp/0000000000000000/4E4D07D3/00000002; to remove
+content, delete its folder there. Added music appears under "Change BGM" on
+the screen before a race, as "Player Disc". This is new: real content has
+been added and played on Windows, on Linux only stand-in files made for
+testing.
 
 
 WHERE THINGS ARE KEPT

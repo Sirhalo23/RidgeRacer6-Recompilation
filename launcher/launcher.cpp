@@ -75,6 +75,14 @@ std::wstring Widen(const std::string& s) {
   return w;
 }
 
+std::string Narrow(const std::wstring& w) {
+  if (w.empty()) return "";
+  int n = WideCharToMultiByte(CP_UTF8, 0, w.data(), (int)w.size(), nullptr, 0, nullptr, nullptr);
+  std::string s(n, '\0');
+  WideCharToMultiByte(CP_UTF8, 0, w.data(), (int)w.size(), &s[0], n, nullptr, nullptr);
+  return s;
+}
+
 std::string Trim(const std::string& s) {
   size_t a = s.find_first_not_of(" \t\r\n");
   if (a == std::string::npos) return "";
@@ -312,14 +320,17 @@ bool IsReservedKey(const std::string& name) {
 // ---------------------------------------------------------------------------
 
 enum : int {
-  IDC_TAB0 = 100, IDC_TAB1, IDC_TAB2, IDC_TAB3,  // the page buttons in the banner, in page order
+  IDC_TAB0 = 100, IDC_TAB1, IDC_TAB2, IDC_TAB3, IDC_TAB4,  // the page buttons in the banner, in page order
   IDC_SCREEN, IDC_SHAPE, IDC_HUD, IDC_SCALE, IDC_SMOOTH, IDC_ANISO, IDC_FOLIAGE,
   IDC_KEYBOARD, IDC_NAMES, IDC_BINDLIST, IDC_SETKEY, IDC_ADDKEY, IDC_CLEARKEY, IDC_RESETKEYS,
   IDC_PLAY, IDC_SAVE, IDC_DEFAULTS, IDC_LOGS, IDC_SAVES, IDC_DIAG, IDC_STATUS,
   IDC_STOP_COPY, IDC_COPY_AGAIN, IDC_ACH_LIST, IDC_ACH_SOUND,
+  IDC_DLC_LIST, IDC_DLC_ADD, IDC_DLC_FOLDER, IDC_DLC_OPEN, IDC_DLC_NOTE,
 };
-const int kPageCount = 4;
+const int kPageCount = 5;
 const int kAchievementsPage = 2;
+const int kDlcPage = 3;
+const int kTroublePage = 4;
 
 // Colours, taken from the game's own menus: white pages, a yellow-green
 // accent, charcoal bars.
@@ -2104,10 +2115,217 @@ void PlayAchievementSound() {
   SetStatus(L"No achievement.wav was found.");
 }
 
+// ---------------------------------------------------------------------------
+// DLC page
+// ---------------------------------------------------------------------------
+//
+// Downloadable content the player owns can be added to the game. On the
+// console it sits on the hard drive as package files (long names without an
+// extension, in Content\0000000000000000\4E4D07D3\00000002). The game program
+// unpacks them itself when started with --rr6_install_content=<files or
+// folders, separated by |> (src/dlc_install.cpp): it checks that each one is
+// downloadable content for this game, unpacks it into the save data folder,
+// writes what happened to dlc-install-result.txt there, and closes without
+// starting the game. It also keeps dlc-installed.txt, the names of what is
+// installed. Nothing of this is game data of ours: the files are the player's.
+
+const wchar_t* const kDlcHint = L"To remove content, delete its folder (\"Open content folder\").";
+
+std::wstring ContentFolder() {
+  std::wstring root = UserDataRoot();
+  if (root.empty()) return L"";
+  return root + L"\\0000000000000000\\4E4D07D3\\00000002";
+}
+
+std::vector<std::string> SplitOn(const std::string& text, char separator) {
+  std::vector<std::string> parts;
+  size_t start = 0;
+  for (;;) {
+    size_t end = text.find(separator, start);
+    if (end == std::string::npos) {
+      parts.push_back(text.substr(start));
+      return parts;
+    }
+    parts.push_back(text.substr(start, end - start));
+    start = end + 1;
+  }
+}
+
+// Lists what is installed: every folder in the content folder, under the name
+// the game program recorded for it.
+void RefreshDlc() {
+  HWND list = Ctl(IDC_DLC_LIST);
+  if (!list) return;
+  SendMessageW(list, LB_RESETCONTENT, 0, 0);
+  std::map<std::string, std::string> names;
+  std::string text;
+  std::wstring root = UserDataRoot();
+  if (!root.empty() && ReadFileUtf8(root + L"\\dlc-installed.txt", &text)) {
+    for (const std::string& line : SplitOn(text, '\n')) {
+      std::vector<std::string> fields = SplitOn(Trim(line), '\t');
+      if (fields.size() >= 2 && !fields[0].empty()) names[fields[0]] = fields[1];
+    }
+  }
+  int count = 0;
+  std::wstring folder = ContentFolder();
+  WIN32_FIND_DATAW found;
+  HANDLE find = folder.empty() ? INVALID_HANDLE_VALUE : FindFirstFileW((folder + L"\\*").c_str(), &found);
+  if (find != INVALID_HANDLE_VALUE) {
+    do {
+      if (!(found.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) continue;
+      if (!wcscmp(found.cFileName, L".") || !wcscmp(found.cFileName, L"..")) continue;
+      auto name = names.find(Narrow(found.cFileName));
+      std::wstring shown = name != names.end() ? Widen(name->second) : std::wstring(found.cFileName);
+      SendMessageW(list, LB_ADDSTRING, 0, (LPARAM)shown.c_str());
+      ++count;
+    } while (FindNextFileW(find, &found));
+    FindClose(find);
+  }
+  EnableWindow(list, count > 0);
+  if (count == 0) SendMessageW(list, LB_ADDSTRING, 0, (LPARAM)L"No downloadable content has been added.");
+}
+
+std::vector<std::wstring> PickContentFiles() {
+  std::vector<wchar_t> buffer(65536, 0);
+  OPENFILENAMEW dialog = {};
+  dialog.lStructSize = sizeof(dialog);
+  dialog.hwndOwner = app.window;
+  dialog.lpstrFilter = L"All files (*.*)\0*.*\0";
+  dialog.lpstrFile = buffer.data();
+  dialog.nMaxFile = (DWORD)buffer.size();
+  dialog.lpstrTitle = L"Choose your Ridge Racer 6 content files";
+  dialog.Flags = OFN_EXPLORER | OFN_ALLOWMULTISELECT | OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST |
+                 OFN_HIDEREADONLY | OFN_NOCHANGEDIR;
+  if (!GetOpenFileNameW(&dialog)) return {};
+  // One file: its full path. Several: the folder, then each name, each ended
+  // by a zero, with one more zero after the last.
+  std::wstring first = buffer.data();
+  const wchar_t* next = buffer.data() + first.size() + 1;
+  if (*next == 0) return {first};
+  if (!first.empty() && first.back() != L'\\') first += L'\\';
+  std::vector<std::wstring> files;
+  while (*next) {
+    std::wstring name = next;
+    files.push_back(first + name);
+    next += name.size() + 1;
+  }
+  return files;
+}
+
+std::wstring PickContentFolder() {
+  BROWSEINFOW info = {};
+  info.hwndOwner = app.window;
+  info.lpszTitle = L"Choose the folder that holds your Ridge Racer 6 content files";
+  info.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE | BIF_NONEWFOLDERBUTTON;
+  PIDLIST_ABSOLUTE item = SHBrowseForFolderW(&info);
+  if (!item) return L"";
+  wchar_t path[MAX_PATH * 2] = L"";
+  bool ok = SHGetPathFromIDListW(item, path) != FALSE;
+  CoTaskMemFree(item);
+  return ok ? std::wstring(path) : L"";
+}
+
+void AddDlc(std::vector<std::wstring> paths) {
+  if (paths.empty()) return;
+  if (app.game_exe.empty() || app.setup != Setup::kReady || !GameFilesReady()) {
+    MessageBoxW(app.window,
+                L"Set the game up first: the game files have to be copied from your disc image before "
+                L"content can be added.",
+                L"Ridge Racer 6", MB_ICONINFORMATION);
+    return;
+  }
+  std::wstring root = UserDataRoot();
+  if (root.empty()) {
+    MessageBoxW(app.window, L"The save data folder could not be found.", L"Ridge Racer 6", MB_ICONERROR);
+    return;
+  }
+  std::wstring list;
+  for (std::wstring path : paths) {
+    // A backslash before the closing quote would swallow the quote.
+    while (!path.empty() && path.back() == L'\\') path.pop_back();
+    if (!path.empty() && path.back() == L':') path += L"\\.";
+    if (path.empty() || path.find(L'"') != std::wstring::npos) continue;
+    if (!list.empty()) list += L"|";
+    list += path;
+  }
+  CreateDirectoryW((app.dir + L"logs").c_str(), nullptr);
+  std::wstring cmd = L"\"" + app.game_exe + L"\" --game_data_root \"" + app.game_data +
+                     L"\" --gpu_plugin=xenos --fullscreen=false --log_file \"" + app.dir +
+                     L"logs\\dlc-install.log\" \"--rr6_install_content=" + list + L"\"";
+  if (list.empty() || cmd.size() > 30000) {
+    MessageBoxW(app.window,
+                L"That is too many files to pass on at once. Use \"Add a folder...\" and choose the "
+                L"folder they are in.",
+                L"Ridge Racer 6", MB_ICONINFORMATION);
+    return;
+  }
+  std::wstring result_path = root + L"\\dlc-install-result.txt";
+  DeleteFileW(result_path.c_str());
+
+  SetStatus(L"Adding downloadable content...");
+  SetWindowTextW(Ctl(IDC_DLC_NOTE), L"Adding... a game window opens for a moment and closes again.");
+  for (int id : {IDC_DLC_ADD, IDC_DLC_FOLDER, IDC_PLAY}) EnableWindow(Ctl(id), FALSE);
+  DWORD code = 0;
+  bool ran = RunAndWait(cmd, app.dir, &code, 0);
+  if (!IsWindow(app.window)) return;
+  for (int id : {IDC_DLC_ADD, IDC_DLC_FOLDER, IDC_PLAY}) EnableWindow(Ctl(id), TRUE);
+  SetWindowTextW(Ctl(IDC_DLC_NOTE), kDlcHint);
+  SetForegroundWindow(app.window);
+
+  std::string text;
+  if (!ran || !ReadFileUtf8(result_path, &text)) {
+    SetStatus(L"The content could not be added.");
+    MessageBoxW(app.window,
+                L"The content could not be added: the game program did not report back.\n\n"
+                L"Check that the game itself starts with Play. The log of this attempt is "
+                L"dlc-install.log in the logs folder (Troubleshooting tab, \"Open logs folder\").",
+                L"Ridge Racer 6", MB_ICONWARNING);
+    RefreshDlc();
+    return;
+  }
+  int added = 0, not_added = 0;
+  std::wstring added_names, problems;
+  for (const std::string& line : SplitOn(text, '\n')) {
+    std::vector<std::string> fields = SplitOn(Trim(line), '\t');
+    if (fields.size() < 3) continue;
+    if (fields[0] == "installed") {
+      ++added;
+      added_names += L"\n    " + Widen(fields[1]);
+    } else if (fields[0] == "refused" || fields[0] == "failed") {
+      ++not_added;
+      problems += L"\n    " + Widen(fields[2]) + L": " + Widen(fields[1]);
+    }
+  }
+  wchar_t head[160];
+  if (not_added == 0) {
+    swprintf(head, 160, added == 1 ? L"%d content package added." : L"%d content packages added.", added);
+  } else {
+    swprintf(head, 160, L"%d added, %d not added.", added, not_added);
+  }
+  SetStatus(head);
+  RefreshDlc();
+  std::wstring message = head;
+  if (added) message += L"\n\nAdded:" + added_names;
+  if (not_added) message += L"\n\nNot added:" + problems;
+  if (added) message += L"\n\nThe game looks for added content each time it starts.";
+  MessageBoxW(app.window, message.c_str(), L"Ridge Racer 6",
+              not_added ? MB_ICONWARNING : MB_ICONINFORMATION);
+}
+
+void OpenContentFolder() {
+  std::wstring folder = ContentFolder();
+  if (folder.empty() || !DirExists(folder)) {
+    SetStatus(L"No downloadable content has been added yet.");
+    return;
+  }
+  ShellExecuteW(app.window, L"open", folder.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+}
+
 void ShowPage(int page) {
   if (page < 0 || page >= kPageCount) return;
   app.current_page = page;
   if (page == kAchievementsPage) RefreshAchievements();
+  if (page == kDlcPage) RefreshDlc();
   for (int p = 0; p < kPageCount; ++p) {
     ShowWindow(app.page[p], p == page ? SW_SHOW : SW_HIDE);
     InvalidateRect(Ctl(IDC_TAB0 + p), nullptr, FALSE);
@@ -2122,7 +2340,7 @@ void BuildUi() {
   // Page buttons, on the dark strip at the foot of the banner.
   // Each is as wide as its text plus 12 units either side, so the first one's
   // text lines up with the 24-unit margin used everywhere else.
-  const wchar_t* tabs[kPageCount] = {L"Display", L"Controls", L"Achievements", L"Troubleshooting"};
+  const wchar_t* tabs[kPageCount] = {L"Display", L"Controls", L"Achievements", L"DLC", L"Troubleshooting"};
   HDC measure = GetDC(app.window);
   HGDIOBJ measure_font = SelectObject(measure, app.tab_font);
   int tx = S(12);
@@ -2228,8 +2446,32 @@ void BuildUi() {
     SetWindowPos(sound, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
   }
 
+  // ---- DLC page ----
+  pg = app.page[kDlcPage];
+  y = 14;
+  AddHeading(pg, L"Downloadable content", lx, y, full);
+  y += 22;
+  AddNote(pg,
+          L"If you own downloadable content for Ridge Racer 6, you can add it to the game here. Use the "
+          L"content files from your own Xbox 360's storage. They are in the folder "
+          L"Content\\0000000000000000\\4E4D07D3\\00000002 and have long names without an extension. "
+          L"The files are only read, and nothing is downloaded.",
+          lx, y, full, 52);
+  y += 58;
+  Add(pg, L"LISTBOX", L"", LBS_NOINTEGRALHEIGHT | LBS_NOSEL | WS_VSCROLL | WS_TABSTOP, lx, y, full, 150,
+      IDC_DLC_LIST, WS_EX_CLIENTEDGE);
+  y += 158;
+  AddButton(pg, L"Add content files...", lx, y, 170, 28, IDC_DLC_ADD);
+  AddButton(pg, L"Add a folder...", lx + 178, y, 130, 28, IDC_DLC_FOLDER);
+  AddButton(pg, L"Open content folder", lx + full - 170, y, 170, 28, IDC_DLC_OPEN);
+  y += 36;
+  {
+    HWND note = Add(pg, L"STATIC", kDlcHint, SS_NOPREFIX, lx, y, full, 34, IDC_DLC_NOTE);
+    app.muted.insert(note);
+  }
+
   // ---- Troubleshooting page ----
-  pg = app.page[3];
+  pg = app.page[kTroublePage];
   y = 14;
   AddHeading(pg, L"Bug reports", lx, y, full);
   y += 22;
@@ -2290,6 +2532,13 @@ LRESULT HandleCommand(HWND hwnd, WPARAM wp) {
     switch (id) {
       case IDC_KEYBOARD: UpdateEnabledStates(); break;
       case IDC_ACH_SOUND: PlayAchievementSound(); break;
+      case IDC_DLC_ADD: AddDlc(PickContentFiles()); break;
+      case IDC_DLC_FOLDER: {
+        std::wstring folder = PickContentFolder();
+        if (!folder.empty()) AddDlc({folder});
+        break;
+      }
+      case IDC_DLC_OPEN: OpenContentFolder(); break;
       case IDC_SETKEY: ChangeKey(false); break;
       case IDC_ADDKEY: ChangeKey(true); break;
       case IDC_CLEARKEY: {
@@ -2480,6 +2729,7 @@ HFONT MakeFont(const std::wstring& face, int pixels, int weight) {
 
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR command_line, int) {
   SetProcessDPIAware();  // also declared in the manifest; needed for the true screen size
+  CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);  // the folder chooser on the DLC page needs it
   app.instance = instance;
   INITCOMMONCONTROLSEX icc = {sizeof(icc), ICC_LISTVIEW_CLASSES | ICC_STANDARD_CLASSES};
   InitCommonControlsEx(&icc);

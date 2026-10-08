@@ -245,6 +245,64 @@ was not finished. The path from the manager on was then run on the rig
 step): user index 0, the SDK logged `XGIUserWriteAchievements: id=1` and
 "Achievement unlocked", the request completed with result 0.
 
+## Downloadable content (`src/dlc_install.cpp`, the launcher's DLC page)
+
+Asked for in issue #2. The SDK already does everything the game needs for
+content that has been unpacked into its folder layout under the user data
+folder, and it has a routine that unpacks a console package into that layout
+(`ContentManager::InstallContent`); nothing calls it. So:
+
+- `rr6_recomp --rr6_install_content="<file or folder>|..."` installs and
+  leaves. `Rr6RecompApp::LaunchModule` is overridden for it: by then the
+  executable is loaded, so the kernel state knows the title ID, and nothing
+  of the game has started. It leaves through `window()->RequestClose()`, the
+  SDK's own way out (which ends in a hard exit); ending the message loop with
+  `QuitFromUIThread` instead hangs in the SDK's teardown.
+- Each file's package header is read first
+  (`StfsContainerDevice::ReadPackageHeader`). Accepted: title ID 4E4D07D3,
+  content type 2 (marketplace content), an STFS volume. Everything else is
+  refused with a reason when the file was named directly. A folder is
+  searched with the folders inside it (six levels, 20,000 files at most), and
+  whatever in it is not content for this game is passed over silently, so the
+  whole copied `Content` folder can be given.
+- Results go to `dlc-install-result.txt` in the user data folder: one line
+  per file, `installed|refused|failed`, a tab, the name or reason, a tab, the
+  file name; the last line is `done` with the three counts. Paths are split
+  on `|`, which a Windows file name cannot contain.
+- `dlc-installed.txt` (folder name, tab, shown name) is rewritten at every
+  start and after an install. The launcher's list is the folders that exist,
+  named from that file.
+- Layout on disk: `<user data>/0000000000000000/4E4D07D3/00000002/<package>/`
+  and `.../4E4D07D3/Headers/00000002/<package>.header` (the content record
+  plus the licence bits taken from the package).
+- Launcher: page 3, "DLC" (Troubleshooting moved to 4). It runs the game
+  program with `--fullscreen=false`, waits, and reads the result file. The
+  launcher is now version 1.3.
+- Linux: `ridge-racer-6.sh --install-dlc PATH` does the same and prints the
+  result.
+
+Tested with `tools/make_test_content.py`, which writes a stand-in package
+(made-up files, real container layout, nothing from any game): two packages
+installed from a file and from a folder with a space in its name, with the
+contents byte-identical afterwards; another game's package, a save, a random
+file and a missing file refused; the game then reports "added 2 items" when
+it lists content at the main menu, and runs on normally. The launcher page
+was run under Wine against a stand-in for the game program, to check the
+command line and the result handling.
+
+First real packages (the owner's, 2026-10-07, Windows, built against the
+fork's SDK): five `LIVE` packages of 32 to 59 MB, each one `.wav` file,
+described in their headers as additional background music ("01: Highride",
+"02: Warp Trooper", "03: Bassrider", "04: Pulse Phaze", "33: Mars Landing").
+All five installed, and the launcher listed them. The game uses them: under
+"Change BGM" on the screen before a race they appear as a "Player Disc" with
+the five tracks, numbered 1 to 5, and one was chosen and heard during a race.
+So the content list, the licence bits and the reading of a package's file
+all work with real content on Direct3D 12 / Windows. Not tried: the
+downloadable car designs (36, free, per the fan wiki), real content on Linux,
+and the subfolder search on Windows. The game creates the content list at the main menu, after the
+save has loaded; with the stand-ins it opened nothing afterwards.
+
 ## Display settings
 
 The game stays at its native 60 fps (its speed is tied to the display tick).

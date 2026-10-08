@@ -8,6 +8,7 @@
 #include <rex/ui/overlay/achievement_notification.h>
 
 #include "achievements.h"
+#include "dlc_install.h"
 #include "overlay_input.h"
 #include "quit_prompt.h"
 
@@ -38,6 +39,25 @@ class Rr6RecompApp : public rex::ReXApp {
     rr6::RemoveAchievements();
     rr6::RemoveQuitPrompt();
     rr6::RemoveOverlayInput();
+  }
+
+  // Started only to install downloadable content (--rr6_install_content):
+  // do that with the game's executable loaded but not started, and leave.
+  // Otherwise note which content is installed and start the game as usual.
+  void LaunchModule() override {
+    if (rr6::ContentInstallRequested()) {
+      rr6::InstallRequestedContent(runtime());
+      // Leave the way the game does when its window is closed; ending the
+      // message loop directly hangs in the SDK's teardown.
+      app_context().CallInUIThreadDeferred([this]() {
+        if (rex::ui::Window* main_window = window()) {
+          main_window->RequestClose();
+        }
+      });
+      return;
+    }
+    rr6::WriteInstalledContentList(runtime());
+    rex::ReXApp::LaunchModule();
   }
 
   // Override virtual hooks for customization:
