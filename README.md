@@ -172,6 +172,8 @@ driver. `README.txt` in each archive has the details.
   automatically for your screen, with optional FXAA and 16x texture filtering.
 - **Ultrawide:** fills screens wider than 16:9 (played at 21:9), with the race
   HUD moved to the screen edges or kept where 16:9 had it.
+- **Languages:** English, Japanese, German, French, Spanish or Italian (the
+  launcher's Language setting); the disc has all six.
 - **Controllers:** Xbox and PlayStation pads through SDL, with no setup.
 - **Keyboard:** works alongside a controller; every key can be changed.
 - **Saving** to `Documents\rr6_recomp`.
@@ -240,14 +242,18 @@ extension; keep those names. (A PC cannot read an Xbox 360 drive directly; a rea
 the console's disk format is needed.) No content is included here, and none
 is downloaded.
 
-- **Windows:** the launcher's **DLC** page, **Add content files...** or
-  **Add a folder...** (the folders inside it are searched too).
-- **Linux and Steam Deck:** `./ridge-racer-6.sh --install-dlc FILE-OR-FOLDER`.
+- **Any system:** put the files in the `DLC` folder that comes with the game
+  (the folders inside it are searched too). Each time the game starts, it
+  adds the ones that are new or have changed.
+- **Windows:** or the launcher's **DLC** page, **Add content files...** or
+  **Add a folder...**, from anywhere.
+- **Linux and Steam Deck:** or `./ridge-racer-6.sh --install-dlc FILE-OR-FOLDER`.
 
 The game program checks that each file is downloadable content for this game,
 unpacks it into the save data folder, and closes again; the game looks for
 added content each time it starts. To remove content, delete its folder
-(the launcher's **Open content folder**).
+(the launcher's **Open content folder**), and take its file out of the `DLC`
+folder if it is there.
 
 This is new. On Windows, five of the game's downloadable music tracks were
 added this way and then chosen and played in a race (the game lists them as

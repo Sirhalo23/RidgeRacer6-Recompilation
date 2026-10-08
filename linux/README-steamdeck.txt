@@ -111,11 +111,19 @@ known yet. Edge smoothing at little cost: swap_post_effect = "fxaa".
 Docked to a TV or monitor the same settings are used; raise the two scale
 values if the picture looks soft there and the speed holds.
 
+Language: the game is in English unless you choose another of the disc's six.
+Set user_language in bin/rr6_recomp.toml (1 English, 2 Japanese, 3 German,
+4 French, 5 Spanish, 6 Italian), or in Konsole:
+./ridge-racer-6.sh --language german
+
 
 DOWNLOADABLE CONTENT
 --------------------
-If you own downloadable content for Ridge Racer 6, you can add it. In Desktop
-Mode, open a terminal (Konsole) in this folder and run:
+If you own downloadable content for Ridge Racer 6, you can add it. The
+simplest way: in Desktop Mode, copy the content files into the DLC folder
+here. Each time the game starts, it adds the ones that are new or have
+changed, also when started from Game Mode. Or open a terminal (Konsole) in
+this folder and run:
 
   ./ridge-racer-6.sh --install-dlc FILE-OR-FOLDER
 

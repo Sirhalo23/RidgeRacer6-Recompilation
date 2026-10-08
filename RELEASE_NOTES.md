@@ -13,6 +13,12 @@ repository are not flagged. Details and how to check the file:
 
 ## Not released yet
 
+- Language: the game can now be played in any of the disc's six languages
+  (English, Japanese, German, French, Spanish, Italian): the launcher's
+  Language setting on the Display tab, or `--language` on Linux. Until now the
+  game was always told to use English. Asked for in issue #2.
+- A `DLC` folder comes with the game: content files put there are added each
+  time the game starts (only new or changed ones). Asked for in issue #2.
 - Adding downloadable content is safer: each package's list of files is
   checked before anything is written (a doctored package could otherwise
   write files outside the content folder), files are unpacked with every
