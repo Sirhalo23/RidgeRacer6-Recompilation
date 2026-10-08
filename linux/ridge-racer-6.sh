@@ -14,6 +14,9 @@
 #   --diagnostic     this once, record a detailed log (logs/run.log)
 #   --wayland        this once, let the game pick Wayland instead of X11
 #   --outside-steam  Steam Deck: start even though Steam did not start this
+#   --install-dlc PATH   add downloadable content you own: one content file
+#                    from an Xbox 360's storage, or a folder of them (can be
+#                    given several times); then leave without starting the game
 #   --help
 #
 # Settings are in bin/rr6_recomp.toml (a text file); F4 in the game changes
@@ -33,6 +36,7 @@ windowed=0
 diagnostic=0
 wayland=0
 outside_steam=0
+dlc=()
 while [ $# -gt 0 ]; do
   case "$1" in
     --iso) image="${2:-}"; shift ;;
@@ -43,8 +47,10 @@ while [ $# -gt 0 ]; do
     --diagnostic) diagnostic=1 ;;
     --wayland) wayland=1 ;;
     --outside-steam) outside_steam=1 ;;
+    --install-dlc) [ -n "${2:-}" ] && dlc+=("$(readlink -f -- "$2")"); shift ;;
+    --install-dlc=*) dlc+=("$(readlink -f -- "${1#--install-dlc=}")") ;;
     --in-own-terminal) RR6_OWN_TERMINAL=1 ;;
-    -h|--help) sed -n '2,21p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n '2,24p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *.iso|*.ISO) image="$1" ;;
     *) echo "Unknown option: $1 (try --help)"; exit 2 ;;
   esac
@@ -417,6 +423,41 @@ clear_leftovers() {
   fi
 }
 clear_leftovers
+
+# ------------------------------------------------------ downloadable content
+#
+# --install-dlc: the game program unpacks the player's own content packages
+# itself (src/dlc_install.cpp in the game's source), writes what it did to
+# dlc-install-result.txt in the save data folder, and closes again.
+if [ ${#dlc[@]} -gt 0 ]; then
+  list=""
+  for item in "${dlc[@]}"; do
+    list="${list:+$list|}$item"
+  done
+  data="${XDG_DATA_HOME:-$HOME/.local/share}/rr6_recomp"
+  rm -f "$data/dlc-install-result.txt"
+  echo "Adding downloadable content. A game window opens for a moment and closes again."
+  cd "$BIN" || fail "The folder $BIN cannot be entered."
+  ./rr6_recomp --game_data_root "$GAME" --gpu_plugin=xenos --fullscreen=false \
+    --log_file "$LOGS/dlc-install.log" "--rr6_install_content=$list" > "$LOGS/dlc-install-console.txt" 2>&1
+  clear_leftovers
+  if [ ! -f "$data/dlc-install-result.txt" ]; then
+    fail "The content could not be added: the game program did not report back.
+
+Check that the game itself starts. The log of this attempt is logs/dlc-install.log."
+  fi
+  summary="$(awk -F'\t' '
+    $1 == "installed" { added = added "\n    " $2; n++ }
+    $1 == "refused" || $1 == "failed" { bad = bad "\n    " $3 ": " $2; m++ }
+    END {
+      printf "%d added, %d not added.", n, m
+      if (n) printf "\n\nAdded:%s", added
+      if (m) printf "\n\nNot added:%s", bad
+      if (n) printf "\n\nThe game looks for added content each time it starts."
+    }' "$data/dlc-install-result.txt")"
+  tell info "$summary"
+  finish 0
+fi
 
 # ------------------------------------- Steam Deck: started from outside Steam
 #

@@ -120,6 +120,26 @@ one, a pop-up appears with a sound, and it is remembered.
 - Progress is kept with your save data (Documents\rr6_recomp).
 
 
+DOWNLOADABLE CONTENT
+--------------------
+If you own downloadable content for Ridge Racer 6, the launcher's DLC page
+can add it to the game.
+
+- You need the content files from your own Xbox 360's storage. They are in
+  the folder Content\0000000000000000\4E4D07D3\00000002 and have long names
+  without an extension. A PC cannot read an Xbox 360 drive directly; a reader
+  program for the console's disk format is needed to copy them off.
+- On the DLC page press "Add content files..." and choose them, or
+  "Add a folder..." for a folder that holds them. A game window opens for a
+  moment and closes again; the launcher then says what was added.
+- Only content for Ridge Racer 6 is accepted. Saves and other games' files
+  are refused with a reason.
+- The game looks for added content each time it starts. To remove content,
+  delete its folder ("Open content folder" on the DLC page).
+- This is new and has only been tried with stand-in files made for testing.
+  If your content does not show up in the game, please report it.
+
+
 WHAT TO TEST
 ------------
 This build has only been played for short sessions on ONE PC (NVIDIA

@@ -228,6 +228,28 @@ earned, 565 of the 1000 gamerscore.
 The sound is an original chime. To use another, put your own `achievement.wav`
 next to the launcher (on Linux, next to `ridge-racer-6.sh`).
 
+## Downloadable content
+
+If you own downloadable content for Ridge Racer 6, you can add it. You need
+the content files from your own Xbox 360's storage: they are in
+`Content\0000000000000000\4E4D07D3\00000002` and have long names without an
+extension. (A PC cannot read an Xbox 360 drive directly; a reader program for
+the console's disk format is needed.) No content is included here, and none
+is downloaded.
+
+- **Windows:** the launcher's **DLC** page, **Add content files...** or
+  **Add a folder...**.
+- **Linux and Steam Deck:** `./ridge-racer-6.sh --install-dlc FILE-OR-FOLDER`.
+
+The game program checks that each file is downloadable content for this game,
+unpacks it into the save data folder, and closes again; the game looks for
+added content each time it starts. To remove content, delete its folder
+(the launcher's **Open content folder**).
+
+This is new and has only been tried with stand-in packages made for testing:
+unpacking works and the game finds what was unpacked, but no real content
+package has been through it yet. Reports are welcome.
+
 ## Known limitations
 
 - Played on one PC only so far (NVIDIA RTX 3060 Ti, 3440x1440), in short

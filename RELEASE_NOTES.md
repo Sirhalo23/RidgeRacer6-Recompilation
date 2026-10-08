@@ -11,6 +11,16 @@ file: 28 of 71 scanners for the SDK's own build of it in v0.1.0 and v0.1.2,
 repository are not flagged. Details and how to check the file:
 [If your antivirus flags rexruntime.dll](README.md#if-your-antivirus-flags-rexruntimedll).
 
+## Not yet released
+
+- Downloadable content: your own content packages can be added. Windows: the
+  launcher's new DLC page. Linux and Steam Deck:
+  `./ridge-racer-6.sh --install-dlc FILE-OR-FOLDER`. The game program checks
+  each package (it must be downloadable content for this game), unpacks it
+  into the save data folder and closes again. Tried with stand-in packages
+  only: unpacking works and the game lists what was unpacked. No real content
+  package has been through it yet.
+
 ## v0.1.3 (2026-10-07)
 
 Inside the zip it calls itself "test build 07". The game is the same as in

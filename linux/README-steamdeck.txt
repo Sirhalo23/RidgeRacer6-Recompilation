@@ -109,6 +109,22 @@ Docked to a TV or monitor the same settings are used; raise the two scale
 values if the picture looks soft there and the speed holds.
 
 
+DOWNLOADABLE CONTENT
+--------------------
+If you own downloadable content for Ridge Racer 6, you can add it. In Desktop
+Mode, open a terminal (Konsole) in this folder and run:
+
+  ./ridge-racer-6.sh --install-dlc FILE-OR-FOLDER
+
+You need the content files from your own Xbox 360's storage. They are in the
+folder Content/0000000000000000/4E4D07D3/00000002 and have long names without
+an extension. Give one file, or a folder that holds them. A game window opens
+for a moment and closes again, and the script says what was added. To remove
+content, delete its folder in
+~/.local/share/rr6_recomp/0000000000000000/4E4D07D3/00000002. This is new and
+has only been tried with stand-in files made for testing.
+
+
 WHERE THINGS ARE KEPT
 ---------------------
   this folder/game/        the game files copied from your disc image

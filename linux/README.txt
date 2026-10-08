@@ -107,6 +107,24 @@ one, a pop-up appears with a sound, and it is remembered.
 - Progress is kept with your save data, in ~/.local/share/rr6_recomp.
 
 
+DOWNLOADABLE CONTENT
+--------------------
+If you own downloadable content for Ridge Racer 6, you can add it:
+
+  ./ridge-racer-6.sh --install-dlc FILE-OR-FOLDER
+
+You need the content files from your own Xbox 360's storage. They are in the
+folder Content/0000000000000000/4E4D07D3/00000002 and have long names without
+an extension. Give one file, or a folder that holds them (the option can be
+repeated). A game window opens for a moment and closes again, and the script
+says what was added. Only content for Ridge Racer 6 is accepted.
+
+The game looks for added content each time it starts. It is unpacked into
+~/.local/share/rr6_recomp/0000000000000000/4E4D07D3/00000002; to remove
+content, delete its folder there. This is new and has only been tried with
+stand-in files made for testing.
+
+
 WHERE THINGS ARE KEPT
 ---------------------
   this folder/game/        the game files copied from your disc image
