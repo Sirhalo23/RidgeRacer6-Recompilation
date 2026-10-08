@@ -8,6 +8,8 @@
 #include <rex/ui/overlay/achievement_notification.h>
 
 #ifdef __APPLE__
+#include <cstdlib>
+
 #include <rex/filesystem.h>
 #include <rex/input/flags.h>
 #endif
@@ -28,6 +30,13 @@ class Rr6RecompApp : public rex::ReXApp {
   }
 
 #ifdef __APPLE__
+  void OnConfigurePaths(rex::PathConfig& paths) override {
+    // The release launcher keeps mutable settings outside the signed bundle.
+    if (const char* root = std::getenv("RR6_MACOS_RELEASE_USER_ROOT")) {
+      paths.config_path = std::filesystem::path(root) / "rr6_recomp.toml";
+    }
+  }
+
   void OnPostInitLogging() override {
     // Finder and Terminal may launch from a different working directory.
     // Resolve the default SDL mapping database beside the executable, while

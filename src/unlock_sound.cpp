@@ -61,6 +61,9 @@ std::filesystem::path FindSound() {
       folder.parent_path() / "achievement.wav",
       folder / "achievement.wav",
       folder / "sounds" / "achievement.wav",
+#ifdef __APPLE__
+      folder.parent_path() / "Resources" / "sounds" / "achievement.wav",
+#endif
   };
   std::error_code ec;
   for (const std::filesystem::path& candidate : candidates) {

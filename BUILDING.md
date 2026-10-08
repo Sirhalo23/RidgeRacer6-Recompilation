@@ -166,6 +166,43 @@ The launch script stores saves and caches in `out/userdata`, and writes
 rendering scale is native 720p. The stock SDK uses the same texture LOD bias
 workaround as Linux (see above).
 
+### A single app for testers
+
+After building, run:
+
+    ./macos/make-package.sh
+
+This creates `dist/RidgeRacer6-macOS-arm64-test.zip` (or `x86_64` on Intel),
+containing one `Ridge Racer 6.app`. The package uses a whitelist of runtime
+files rather than copying the development bundle, audits linked libraries,
+includes third-party licenses, strips local/debug symbols and ad-hoc signs
+the app. It contains no ISO or extracted disc files. Python and Xcode are
+needed to make the package, but not on the machine running it.
+
+Put the unpacked app beside the user's Ridge Racer 6 USA ISO and double-click
+it. When exactly one ISO is beside the app it is selected automatically;
+otherwise a native file picker asks for it. First launch validates the
+executable against the supported USA SHA-256 and copies about 6 GB of files.
+A progress window allows cancellation, and interrupted copies can resume.
+Later launches reuse the complete cache without needing the ISO.
+
+Extracted files, settings, saves and logs are stored in
+`~/Library/Application Support/Ridge Racer 6/`, outside the app bundle.
+The default settings are copied there once; later launches preserve edits.
+The release launcher uses the existing native `launcher/disc_image.cpp`
+extractor, so there is no runtime Python or SDK installation requirement.
+
+The package's `LSMinimumSystemVersion` comes from the maximum minimum OS
+version recorded in its bundled Mach-O files. The current local build targets
+macOS 27.0; this is not a claim of compatibility with older macOS versions.
+Build the SDK and game with an explicit deployment target and test that OS
+before publishing an older-OS release. Intel packages also need their own
+build and runtime verification.
+
+The generated package is a local test build, not a notarized public release.
+For public distribution, use Developer ID signing and Apple's
+[notarization workflow](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution).
+
 ### Controllers on macOS
 
 SDL3 handles analog sticks, analog triggers, buttons, hotplug and rumble
@@ -186,8 +223,10 @@ separately before claiming a controller model has been verified.
 ### Verification status
 
 The ARM64 Release build has been tested on an Apple M4 Max. Native audio
-and Bluetooth DualShock 4 menu input have been observed. Stable Pac-Man
-presentation was observed with the drawable fix applied to the previous
-MoltenVK pin. The final updated pin builds successfully but still needs a
-visible-launch recheck. Intel builds, race rendering, analog steering/triggers,
-controller reconnect, rumble and Xbox hardware still require verification.
+and Bluetooth DualShock 4 menu input have been observed. The packaged app
+has launched with its bundled Vulkan/MoltenVK runtime and shown stable Pac-Man
+graphics using `--async_shader_compilation=false`. Its native ISO importer has
+extracted the supported image and rejected malformed/wrong-version test images
+before writing data. Bundle signature verification passes after launch.
+Intel builds, race rendering, analog steering/triggers, controller reconnect,
+rumble, Xbox hardware and older macOS versions still require verification.
