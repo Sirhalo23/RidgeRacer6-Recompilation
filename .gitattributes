@@ -2,5 +2,3 @@
 *.bat text eol=crlf
 *.sh text eol=lf
 *.ico binary
-# Unified diff context lines may contain only their required space prefix.
-patches/*.patch whitespace=-blank-at-eol

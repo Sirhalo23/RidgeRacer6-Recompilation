@@ -126,22 +126,23 @@ Mac you will run on.
 Install Xcode 16 or newer with its command-line tools, CMake 3.25 or newer,
 Ninja and Python 3. With Homebrew: `brew install cmake ninja python`.
 
-Place a ReXGlue SDK v0.10.0 source checkout next to this repository:
+Use a ReXGlue SDK source checkout containing the source-build and
+presentation fixes proposed in
+[ReXGlue SDK PR #487](https://github.com/rexglue/rexglue-sdk/pull/487).
+The stock v0.10.0 revision does not contain those fixes. This project uses
+the SDK through `REXSDK_DIR`; it does not modify or patch the SDK.
 
-    git clone --branch v0.10.0 --recurse-submodules https://github.com/rexglue/rexglue-sdk.git ../rexglue-sdk
+Until an upstream revision includes the fixes, the following fork revision
+provides the tested SDK dependency. Place it next to this repository:
 
-Apply the companion SDK patch before building (the unpatched v0.10.0
-macOS presentation path can stretch a single pixel across the window):
-
-    git -C ../rexglue-sdk apply --index "$PWD/patches/rexglue-sdk-macos.patch"
+    git clone https://github.com/abradburne/rexglue-sdk.git ../rexglue-sdk
+    git -C ../rexglue-sdk checkout 6873c26d0c1067d810e25640de52d67eedff10e9
     git -C ../rexglue-sdk submodule update --init --recursive
 
-The patch fixes SDK source-build header/runtime staging and pins MoltenVK
-to upstream commit `4d74f17e0bc44de5db4b6778313c90258dcce634`, which fixes
-swapchain recreation leaving the drawable at 1x1 pixels. See the
-[upstream fix](https://github.com/KhronosGroup/MoltenVK/commit/4d74f17e0bc44de5db4b6778313c90258dcce634).
-Apply it once to a clean v0.10.0 SDK checkout. An SDK that already includes
-these changes does not need the patch again.
+Replace that temporary dependency with an upstream SDK revision containing
+the fixes when one is available. The SDK revision includes the upstream
+[MoltenVK drawable-size fix](https://github.com/KhronosGroup/MoltenVK/commit/4d74f17e0bc44de5db4b6778313c90258dcce634)
+for swapchain recreation leaving the drawable at 1x1 pixels.
 
 The SDK builds and stages its Vulkan loader and MoltenVK. From this checkout:
 

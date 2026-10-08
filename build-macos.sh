@@ -35,14 +35,7 @@ if [[ "$actual" != "$expected" ]]; then
   exit 1
 fi
 if [[ ! -f "$sdk/CMakeLists.txt" ]]; then
-  echo "Set REXSDK_DIR to a ReXGlue SDK source checkout (v0.10.0)." >&2
-  exit 1
-fi
-
-# Reject the known one-pixel presentation dependency before a lengthy build.
-moltenvk_fix=4d74f17e0bc44de5db4b6778313c90258dcce634
-if ! git -C "$sdk/thirdparty/moltenvk" merge-base --is-ancestor "$moltenvk_fix" HEAD 2>/dev/null; then
-  echo "The SDK needs the macOS companion patch; see BUILDING.md." >&2
+  echo "Set REXSDK_DIR to a ReXGlue SDK source checkout; see BUILDING.md for macOS requirements." >&2
   exit 1
 fi
 
