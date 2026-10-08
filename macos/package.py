@@ -105,6 +105,10 @@ def package(build, sdk, arch, output):
             "Game files, settings, saves and logs are kept in\n"
             "~/Library/Application Support/Ridge Racer 6/.\n\n"
             "Pair a controller over Bluetooth or connect USB. F4 opens settings.\n"
+            "Defaults use 720p guest rendering and a logical-resolution presentation buffer.\n"
+            "For sharper Retina output, set window_high_pixel_density = true in\n"
+            "rr6_recomp.toml and restart. Existing config files are preserved.\n"
+            "Async shader compilation remains enabled; retain caches between runs.\n"
             "Race rendering, full controller behavior and older OS versions still need testing.\n"
             "This test package is ad-hoc signed, not notarized.\n", encoding="utf-8")
         (resources / "BUILD.txt").write_text(

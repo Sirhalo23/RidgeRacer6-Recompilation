@@ -4,6 +4,11 @@ use_fuzzy_alpha_epsilon = true
 resolution_scale = 1
 vsync = true
 
+# Keep fullscreen presentation at logical resolution instead of a Retina
+# back buffer. This does not change the desktop mode or 720p guest rendering.
+window_high_pixel_density = false
+async_shader_compilation = true
+
 # Keyboard input can coexist with controllers. Controllers retain analog
 # steering and triggers; SDL handles connection changes and supported rumble.
 mnk_mode = true

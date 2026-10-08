@@ -136,7 +136,7 @@ Until an upstream revision includes the fixes, the following fork revision
 provides the tested SDK dependency. Place it next to this repository:
 
     git clone https://github.com/abradburne/rexglue-sdk.git ../rexglue-sdk
-    git -C ../rexglue-sdk checkout 6873c26d0c1067d810e25640de52d67eedff10e9
+    git -C ../rexglue-sdk checkout e7f1624e721e19134d6201a45314cb3c8573768c
     git -C ../rexglue-sdk submodule update --init --recursive
 
 Replace that temporary dependency with an upstream SDK revision containing
@@ -165,6 +165,20 @@ The launch script stores saves and caches in `out/userdata`, and writes
 `logs/run-macos.log`. F4 opens settings and F3 opens statistics. Initial
 rendering scale is native 720p. The stock SDK uses the same texture LOD bias
 workaround as Linux (see above).
+
+The macOS defaults set `window_high_pixel_density = false`, using a logical
+resolution presentation buffer rather than a Retina/HiDPI buffer. This
+leaves the desktop display mode and the game's 720p rendering unchanged.
+At 2x display density, it reduces the presentation pixel count by 75%, with
+softer UI and output. Set it to `true` and restart to restore high-density
+presentation. Existing settings are preserved, so add the setting manually
+when upgrading an older build.
+
+`async_shader_compilation = true` remains enabled. New screens can briefly
+skip presentation while shader pipelines compile; keep the user-data cache
+between runs. Lower presentation resolution does not eliminate shader
+compilation drops, and a sustained frame-rate improvement has not yet been
+measured.
 
 ### A single app for testers
 
@@ -228,5 +242,8 @@ has launched with its bundled Vulkan/MoltenVK runtime and shown stable Pac-Man
 graphics using `--async_shader_compilation=false`. Its native ISO importer has
 extracted the supported image and rejected malformed/wrong-version test images
 before writing data. Bundle signature verification passes after launch.
+With high-density presentation disabled, the initial window's swapchain was
+verified at 1280x720 with contents scale 1, versus 2560x1440 at scale 2.
+Fullscreen frame-rate comparison still requires an interactive test.
 Intel builds, race rendering, analog steering/triggers, controller reconnect,
 rumble, Xbox hardware and older macOS versions still require verification.

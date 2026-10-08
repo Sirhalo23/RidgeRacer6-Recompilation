@@ -177,6 +177,17 @@ int main(int argc, char** argv) {
         "--game_data_root=" + game.string(), "--user_data_root=" + (data / "userdata").string(),
         "--gpu_plugin=xenos", "--hid_mappings_file=" + (resources / "gamecontrollerdb.txt").string(),
         "--log_file=" + (data / "logs/run.log").string()};
+    // CLI11 rejects duplicate options. Explicit launch flags replace the
+    // launcher's defaults, while unrelated game flags are simply forwarded.
+    for (const auto& arg : extra) {
+      if (arg.rfind("--", 0) == 0) {
+        const std::string key = arg.substr(0, arg.find('='));
+        for (auto it = args.begin() + 1; it != args.end();) {
+          if (it->substr(0, it->find('=')) == key) it = args.erase(it);
+          else ++it;
+        }
+      }
+    }
     args.insert(args.end(), extra.begin(), extra.end());
     std::vector<char*> pointers;
     for (auto& arg : args) pointers.push_back(arg.data());
