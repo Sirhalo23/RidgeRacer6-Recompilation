@@ -130,10 +130,12 @@ can add it to the game.
   without an extension. A PC cannot read an Xbox 360 drive directly; a reader
   program for the console's disk format is needed to copy them off.
 - On the DLC page press "Add content files..." and choose them, or
-  "Add a folder..." for a folder that holds them. A game window opens for a
-  moment and closes again; the launcher then says what was added.
-- Only content for Ridge Racer 6 is accepted. Saves and other games' files
-  are refused with a reason.
+  "Add a folder..." for a folder that holds them. The folders inside it are
+  searched too, so the copied Content folder itself will do. A game window
+  opens for a moment and closes again; the launcher then says what was added.
+- Only content for Ridge Racer 6 is accepted. A save or another game's file
+  chosen by itself is refused with a reason; in a folder, anything that is
+  not Ridge Racer 6 content is passed over.
 - The game looks for added content each time it starts. To remove content,
   delete its folder ("Open content folder" on the DLC page).
 - This is new and has only been tried with stand-in files made for testing.

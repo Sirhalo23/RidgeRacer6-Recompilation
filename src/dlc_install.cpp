@@ -23,8 +23,10 @@
 //
 // Only packages that are downloadable content for this game are accepted:
 // the package header must carry title ID 4E4D07D3 and the content type
-// "marketplace content". Saves, title updates and other games' content are
-// refused with a reason. The packages are the player's own files; none are
+// "marketplace content". A file named directly that is anything else (a
+// save, a title update, another game's content) is refused with a reason. A
+// folder is searched together with the folders inside it, and whatever in it
+// is not content for this game is passed over without comment. The packages are the player's own files; none are
 // part of this project.
 
 #include "dlc_install.h"
@@ -89,6 +91,11 @@ std::string InstallOne(rex::system::xam::ContentManager* manager, const std::fil
                        bool from_folder_scan, Counts& counts) {
   const std::string shown = OneLine(rex::path_to_utf8(file.filename()));
   auto refuse = [&](const std::string& why) {
+    if (from_folder_scan) {
+      // A folder may hold all sorts of things (a whole console drive, say):
+      // only what is content for this game is reported.
+      return std::string();
+    }
     ++counts.refused;
     REXLOG_INFO("[dlc] refused {}: {}", shown, why);
     return "refused\t" + why + "\t" + shown;
@@ -96,9 +103,6 @@ std::string InstallOne(rex::system::xam::ContentManager* manager, const std::fil
 
   auto header = rex::filesystem::StfsContainerDevice::ReadPackageHeader(file);
   if (!header) {
-    if (from_folder_scan) {
-      return std::string();  // some other file that happens to be in the folder
-    }
     return refuse("not an Xbox 360 content package");
   }
   const uint32_t title_id = header->metadata.execution_info.title_id;
@@ -207,13 +211,31 @@ void InstallRequestedContent(rex::Runtime* runtime) {
       const std::filesystem::path path = rex::to_path(item);
       std::error_code ec;
       if (std::filesystem::is_directory(path, ec)) {
+        // The folder and the folders inside it, so that pointing at "Content"
+        // or at a copy of 4E4D07D3 works as well as pointing at 00000002. Not
+        // without limits: somebody may pick a whole drive.
+        constexpr int kMaxDepth = 6;
+        constexpr int kMaxFiles = 20000;
         int found = 0;
-        for (const auto& entry : std::filesystem::directory_iterator(path, ec)) {
-          std::error_code file_ec;
-          if (!entry.is_regular_file(file_ec)) {
+        int looked_at = 0;
+        std::filesystem::recursive_directory_iterator it(
+            path, std::filesystem::directory_options::skip_permission_denied, ec);
+        const std::filesystem::recursive_directory_iterator end;
+        for (; !ec && it != end; it.increment(ec)) {
+          std::error_code entry_ec;
+          if (it->is_directory(entry_ec)) {
+            if (it.depth() >= kMaxDepth || it->is_symlink(entry_ec)) {
+              it.disable_recursion_pending();
+            }
             continue;
           }
-          std::string line = InstallOne(manager, entry.path(), true, counts);
+          if (!it->is_regular_file(entry_ec)) {
+            continue;
+          }
+          if (++looked_at > kMaxFiles) {
+            break;
+          }
+          std::string line = InstallOne(manager, it->path(), true, counts);
           if (!line.empty()) {
             lines.push_back(std::move(line));
             ++found;
@@ -221,8 +243,9 @@ void InstallRequestedContent(rex::Runtime* runtime) {
         }
         if (found == 0) {
           ++counts.refused;
-          lines.push_back("refused\tno content packages in this folder\t" +
-                          OneLine(rex::path_to_utf8(path.filename())));
+          lines.push_back(
+              "refused\tno Ridge Racer 6 content in this folder or the folders inside it\t" +
+              OneLine(rex::path_to_utf8(path.filename())));
         }
       } else if (std::filesystem::is_regular_file(path, ec)) {
         lines.push_back(InstallOne(manager, path, false, counts));

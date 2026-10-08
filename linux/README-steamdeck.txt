@@ -118,7 +118,8 @@ Mode, open a terminal (Konsole) in this folder and run:
 
 You need the content files from your own Xbox 360's storage. They are in the
 folder Content/0000000000000000/4E4D07D3/00000002 and have long names without
-an extension. Give one file, or a folder that holds them. A game window opens
+an extension. Give one file, or a folder that holds them (the folders inside
+it are searched too). A game window opens
 for a moment and closes again, and the script says what was added. To remove
 content, delete its folder in
 ~/.local/share/rr6_recomp/0000000000000000/4E4D07D3/00000002. This is new and

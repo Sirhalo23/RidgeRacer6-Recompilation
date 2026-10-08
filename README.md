@@ -238,7 +238,7 @@ the console's disk format is needed.) No content is included here, and none
 is downloaded.
 
 - **Windows:** the launcher's **DLC** page, **Add content files...** or
-  **Add a folder...**.
+  **Add a folder...** (the folders inside it are searched too).
 - **Linux and Steam Deck:** `./ridge-racer-6.sh --install-dlc FILE-OR-FOLDER`.
 
 The game program checks that each file is downloadable content for this game,

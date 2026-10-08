@@ -261,8 +261,10 @@ folder, and it has a routine that unpacks a console package into that layout
 - Each file's package header is read first
   (`StfsContainerDevice::ReadPackageHeader`). Accepted: title ID 4E4D07D3,
   content type 2 (marketplace content), an STFS volume. Everything else is
-  refused with a reason. In a folder, files that are not packages are passed
-  over silently.
+  refused with a reason when the file was named directly. A folder is
+  searched with the folders inside it (six levels, 20,000 files at most), and
+  whatever in it is not content for this game is passed over silently, so the
+  whole copied `Content` folder can be given.
 - Results go to `dlc-install-result.txt` in the user data folder: one line
   per file, `installed|refused|failed`, a tab, the name or reason, a tab, the
   file name; the last line is `done` with the three counts. Paths are split
@@ -286,9 +288,16 @@ contents byte-identical afterwards; another game's package, a save, a random
 file and a missing file refused; the game then reports "added 2 items" when
 it lists content at the main menu, and runs on normally. The launcher page
 was run under Wine against a stand-in for the game program, to check the
-command line and the result handling. Not tested: any real content package,
-and so whether the game accepts and uses real content (licence bits, what it
-does with it). The game creates the content list at the main menu, after the
+command line and the result handling.
+
+First real packages (the owner's, 2026-10-07, Windows, built against the
+fork's SDK): five `LIVE` packages of 32 to 59 MB, each one `.wav` file,
+described in their headers as additional background music ("01: Highride",
+"02: Warp Trooper", "03: Bassrider", "04: Pulse Phaze", "33: Mars Landing").
+All five installed, and the launcher listed them. Still open: whether the
+game uses them. In the two minutes it ran afterwards it created the content
+list and opened no package; the place to look is "Change BGM" on the screen
+before a race. The game creates the content list at the main menu, after the
 save has loaded; with the stand-ins it opened nothing afterwards.
 
 ## Display settings
