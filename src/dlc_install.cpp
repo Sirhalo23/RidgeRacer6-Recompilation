@@ -21,6 +21,12 @@
 // dlc-install-result.txt in the user data folder), and leaves without starting
 // the game. The launcher and the Linux start script use it.
 //
+// Content files can also simply be put into the package's DLC folder (next to
+// the bin folder; also accepted: a DLC folder inside the game files folder).
+// At every start, before the game runs, new and changed files there are added
+// the same way. Files already added are recognised by name, size and time, so
+// an unchanged folder costs a directory listing.
+//
 // Only packages that are downloadable content for this game are accepted:
 // the package header must carry title ID 4E4D07D3 and the content type
 // "marketplace content". A file named directly that is anything else (a
@@ -74,6 +80,10 @@ REXCVAR_DEFINE_STRING(rr6_install_content, "", "RR6",
                       "Install downloadable content and exit: one or more content package files, "
                       "or folders of them, separated by |. The packages are your own files from "
                       "an Xbox 360 hard drive.");
+REXCVAR_DEFINE_STRING(rr6_dlc_folder, "", "RR6",
+                      "A folder of content files that the game adds each time it starts (new or "
+                      "changed files only). Empty: the DLC folder next to the bin folder, and DLC "
+                      "in the game files folder. \"none\": switched off.");
 REXCVAR_DEFINE_STRING(rr6_install_result, "", "RR6",
                       "With rr6_install_content: the file to write the result to. Default: "
                       "dlc-install-result.txt in the user data folder.");
@@ -863,6 +873,99 @@ void InstallRequestedContent(rex::Runtime* runtime) {
   REXLOG_INFO("[dlc] finished: {} installed, {} refused, {} failed", counts.installed,
               counts.refused, counts.failed);
   WriteInstalledContentList(runtime);
+}
+
+// The DLC folder: at every start, add what is new or changed there. A list of
+// what was added from it (name, size, time) is kept in the user data folder.
+void AddContentFromDlcFolder(rex::Runtime* runtime) {
+  auto* kernel_state = runtime ? runtime->kernel_state() : nullptr;
+  auto* manager = kernel_state ? kernel_state->content_manager() : nullptr;
+  if (!manager || runtime->user_data_root().empty() || kernel_state->title_id() != kTitleId) {
+    return;
+  }
+  const std::string setting = REXCVAR_GET(rr6_dlc_folder);
+  if (setting == "none") {
+    return;
+  }
+  std::vector<fs::path> folders;
+  if (!setting.empty()) {
+    folders.push_back(rex::to_path(setting));
+  } else {
+    // The program is in <package>/bin.
+    folders.push_back(rex::filesystem::GetExecutableFolder().parent_path() / "DLC");
+    if (!runtime->game_data_root().empty()) {
+      folders.push_back(runtime->game_data_root() / "DLC");
+    }
+  }
+
+  const fs::path record_file = runtime->user_data_root() / "dlc-folder-added.txt";
+  std::map<std::string, std::string> record;  // file name -> "size<TAB>time"
+  std::string text;
+  if (ReadWholeFile(record_file, &text)) {
+    size_t start = 0;
+    while (start < text.size()) {
+      size_t end = text.find('\n', start);
+      if (end == std::string::npos) end = text.size();
+      const std::string line = text.substr(start, end - start);
+      start = end + 1;
+      const size_t tab = line.find('\t');
+      if (tab != std::string::npos) record[line.substr(0, tab)] = line.substr(tab + 1);
+    }
+  }
+  const fs::path content_dir =
+      runtime->user_data_root() / "0000000000000000" / kTitleFolder / kContentTypeFolder;
+
+  Installer installer;
+  installer.manager = manager;
+  installer.user_data = runtime->user_data_root();
+  bool changed = false;
+  int skipped = 0;
+  for (const fs::path& folder : folders) {
+    std::error_code ec;
+    if (!fs::is_directory(folder, ec)) {
+      continue;
+    }
+    const FolderSearch search = SearchFolder(folder);
+    if (search.too_many || search.unreadable || search.too_deep) {
+      REXLOG_WARN("[dlc] not all of the DLC folder {} could be searched", rex::path_to_utf8(folder));
+    }
+    for (const fs::path& file : search.files) {
+      const std::string name = rex::path_to_utf8(file.filename());
+      const uint64_t size = fs::file_size(file, ec);
+      if (ec) continue;
+      const auto time = fs::last_write_time(file, ec);
+      if (ec) continue;
+      const std::string stamp =
+          std::to_string(size) + "\t" + std::to_string(time.time_since_epoch().count());
+      auto known = record.find(name);
+      if (known != record.end() && known->second == stamp &&
+          fs::is_directory(content_dir / rex::to_path(name), ec)) {
+        ++skipped;
+        continue;
+      }
+      const std::string line = InstallOne(installer, file, true);
+      if (line.compare(0, 10, "installed\t") == 0) {
+        record[name] = stamp;
+        changed = true;
+      } else if (!line.empty()) {
+        REXLOG_WARN("[dlc] from the DLC folder: {}", line);
+      }
+    }
+  }
+  std::error_code ec;
+  fs::remove_all(runtime->user_data_root() / "dlc-staging", ec);
+  if (installer.counts.installed + installer.counts.refused + installer.counts.failed > 0) {
+    REXLOG_INFO("[dlc] DLC folder: {} added, {} refused, {} failed, {} already there",
+                installer.counts.installed, installer.counts.refused, installer.counts.failed,
+                skipped);
+  }
+  if (changed) {
+    std::vector<std::string> lines;
+    for (const auto& [name, stamp] : record) {
+      lines.push_back(OneLine(name) + "\t" + stamp);
+    }
+    WriteLines(record_file, lines);
+  }
 }
 
 void WriteInstalledContentList(rex::Runtime* runtime) {

@@ -1,0 +1,12 @@
+Downloadable content you own can go into this folder.
+
+Copy the content files from your own Xbox 360's storage here: they are in
+Content\0000000000000000\4E4D07D3\00000002 and have long names without an
+extension. Keep those names. Folders inside this one are searched too, so a
+copy of the whole Content folder works as well.
+
+Each time the game starts, it adds the files here that are new or have
+changed. Only content for Ridge Racer 6 is used; anything else is left alone.
+The launcher's DLC page can add content too, from anywhere.
+
+No content comes with this game, and none is downloaded.

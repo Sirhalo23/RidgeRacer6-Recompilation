@@ -17,6 +17,10 @@
 #   --install-dlc PATH   add downloadable content you own: one content file
 #                    from an Xbox 360's storage, or a folder of them (can be
 #                    given several times); then leave without starting the game
+#                    (content files put in the DLC folder are added by
+#                    themselves each time the game starts)
+#   --language NAME  the game's language from now on: english, japanese,
+#                    german, french, spanish or italian
 #   --help
 #
 # Settings are in bin/rr6_recomp.toml (a text file); F4 in the game changes
@@ -37,6 +41,7 @@ diagnostic=0
 wayland=0
 outside_steam=0
 dlc=()
+language=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --iso) image="${2:-}"; shift ;;
@@ -51,8 +56,16 @@ while [ $# -gt 0 ]; do
       if [ "$1" = --install-dlc ]; then item="${2:-}"; shift; else item="${1#--install-dlc=}"; fi
       [ -n "$item" ] || { echo "--install-dlc needs a content file or a folder (try --help)"; exit 2; }
       dlc+=("$(readlink -f -- "$item")") ;;
+    --language|--language=*)
+      if [ "$1" = --language ]; then language="${2:-}"; shift; else language="${1#--language=}"; fi
+      case "$(echo "$language" | tr '[:upper:]' '[:lower:]')" in
+        english|en) language=1 ;; japanese|ja) language=2 ;; german|de) language=3 ;;
+        french|fr) language=4 ;; spanish|es) language=5 ;; italian|it) language=6 ;;
+        [1-6]) ;;
+        *) echo "--language: english, japanese, german, french, spanish or italian (try --help)"; exit 2 ;;
+      esac ;;
     --in-own-terminal) RR6_OWN_TERMINAL=1 ;;
-    -h|--help) sed -n '2,24p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n '2,27p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *.iso|*.ISO) image="$1" ;;
     *) echo "Unknown option: $1 (try --help)"; exit 2 ;;
   esac
@@ -169,6 +182,7 @@ if { ! game_ready || [ "$copy_again" = 1 ]; } && [ ! -t 1 ] && [ -z "${RR6_OWN_T
   [ "$wayland" = 1 ] && again+=(--wayland)
   [ "$outside_steam" = 1 ] && again+=(--outside-steam)
   for item in "${dlc[@]}"; do again+=(--install-dlc "$item"); done
+  [ -n "$language" ] && again+=(--language "$language")
   if have konsole; then exec konsole -e "${again[@]}"
   elif have gnome-terminal; then exec gnome-terminal --wait -- "${again[@]}"
   elif have kgx; then exec kgx -- "${again[@]}"
@@ -314,6 +328,10 @@ write_settings() {
       }')"
     read -r aspect letterbox scale_x scale_y <<<"$numbers"
   fi
+  # The language is kept when the file is written afresh.
+  local keep_language
+  keep_language="$(awk -F= '/^user_language[ \t]*=/ { v = $2; sub(/#.*/, "", v); gsub(/[^0-9]/, "", v); print v; exit }' "$CONFIG" 2>/dev/null)"
+  case "$keep_language" in [1-6]) ;; *) keep_language=1 ;; esac
   cat > "$CONFIG" <<TOML
 # Ridge Racer 6 settings. Written by ridge-racer-6.sh for $note.
 # Edit this file with any text editor, or press F4 in the game. To have it
@@ -341,6 +359,7 @@ draw_resolution_scale_y = $scale_y
 swap_post_effect = "none"           # edge smoothing: "none", "fxaa" or "fxaa_extreme"
 anisotropic_override = 5            # texture detail on the road: 3 = 4x, 4 = 8x, 5 = 16x
 use_fuzzy_alpha_epsilon = true      # stops trees and foliage flickering
+user_language = ${keep_language:-1}                   # 1 English, 2 Japanese, 3 German, 4 French, 5 Spanish, 6 Italian
 
 # Keyboard: works together with a controller. Several keys can be given for one
 # button, separated by commas. Keys do not respond while Shift, Ctrl or Alt is
@@ -377,6 +396,15 @@ TOML
 
 if [ ! -f "$CONFIG" ] || [ "$new_settings" = 1 ]; then
   write_settings
+fi
+
+# --language: kept in the settings file, so it lasts.
+if [ -n "$language" ]; then
+  if grep -q '^user_language[[:space:]]*=' "$CONFIG"; then
+    sed -i "s/^user_language[[:space:]]*=.*/user_language = $language                   # 1 English, 2 Japanese, 3 German, 4 French, 5 Spanish, 6 Italian/" "$CONFIG"
+  else
+    echo "user_language = $language                   # 1 English, 2 Japanese, 3 German, 4 French, 5 Spanish, 6 Italian" >> "$CONFIG"
+  fi
 fi
 
 # ------------------------------------------------------------------ the game

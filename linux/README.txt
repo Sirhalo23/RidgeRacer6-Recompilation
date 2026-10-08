@@ -75,6 +75,10 @@ To have the file written afresh:  ./ridge-racer-6.sh --new-settings
 
 The game always runs at 60 frames per second, as it did on Xbox 360.
 
+The game's language (English unless chosen; the disc has six), kept from
+then on:  ./ridge-racer-6.sh --language german   (or english, japanese,
+french, spanish, italian), or user_language in bin/rr6_recomp.toml.
+
 Other options of the start script:  ./ridge-racer-6.sh --help
 
 
@@ -112,7 +116,10 @@ one, a pop-up appears with a sound, and it is remembered.
 
 DOWNLOADABLE CONTENT
 --------------------
-If you own downloadable content for Ridge Racer 6, you can add it:
+If you own downloadable content for Ridge Racer 6, you can add it. Put the
+content files in the DLC folder here (folders inside it are searched too):
+each time the game starts, it adds the files that are new or have changed.
+Or, from anywhere:
 
   ./ridge-racer-6.sh --install-dlc FILE-OR-FOLDER
 
@@ -124,7 +131,8 @@ says what was added. Only content for Ridge Racer 6 is accepted.
 
 The game looks for added content each time it starts. It is unpacked into
 ~/.local/share/rr6_recomp/0000000000000000/4E4D07D3/00000002; to remove
-content, delete its folder there. Added music appears under "Change BGM" on
+content, delete its folder there, and take its file out of the DLC folder if
+it is there. Added music appears under "Change BGM" on
 the screen before a race, as "Player Disc". This is new: real content has
 been added and played on Windows, on Linux only stand-in files made for
 testing.
