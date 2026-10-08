@@ -236,7 +236,7 @@ next to the launcher (on Linux, next to `ridge-racer-6.sh`).
 If you own downloadable content for Ridge Racer 6, you can add it. You need
 the content files from your own Xbox 360's storage: they are in
 `Content\0000000000000000\4E4D07D3\00000002` and have long names without an
-extension. (A PC cannot read an Xbox 360 drive directly; a reader program for
+extension; keep those names. (A PC cannot read an Xbox 360 drive directly; a reader program for
 the console's disk format is needed.) No content is included here, and none
 is downloaded.
 

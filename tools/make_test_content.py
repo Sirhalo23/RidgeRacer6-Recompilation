@@ -12,6 +12,18 @@ console would reject it; the SDK's reader only follows the block chains.
 --type 1 gives a "saved game" and another --title a package "for another
 game"; both are for checking that the installer refuses them.
 
+--break KIND writes a package that is damaged or doctored in one way, for
+checking that the installer refuses it before writing anything:
+  dotdot        a folder named ".." holding escape.txt
+  backslash     a file named "..\\..\\escape.txt"
+  device        a file named "CON.txt"
+  same-name     two files whose names differ only in letter case
+  parent-zero   the first entry claims to be inside entry 0 (itself)
+  parent-range  an entry inside a folder that does not exist
+  parent-file   an entry inside a file
+  chain         a file whose blocks run past the end of the package
+  short         the package file cut off in the middle of a file
+
 Layout written (the read-only form used by LIVE and PIRS packages):
   0x0000  header (0x971A bytes), padded to 0xA000
   0xA000  hash table for data blocks 0..169 (one 0x18-byte entry per block:
@@ -31,7 +43,7 @@ def int24_le(value):
     return struct.pack("<I", value)[:3]
 
 
-def build(title_id, content_type, display_name, magic, files):
+def build(title_id, content_type, display_name, magic, files, total_blocks_override=None):
     # Lay the files out after the file table (block 0).
     entries = []  # (name, is_dir, parent, start_block, block_count, data)
     next_block = 1
@@ -96,7 +108,7 @@ def build(title_id, content_type, display_name, magic, files):
     header[vd + 2] = 0x01  # read-only format: one hash table per level
     struct.pack_into("<H", header, vd + 3, 1)  # file table block count
     header[vd + 5 : vd + 8] = int24_le(0)  # file table block number
-    struct.pack_into(">I", header, vd + 0x1C, total_blocks)
+    struct.pack_into(">I", header, vd + 0x1C, total_blocks_override or total_blocks)
     struct.pack_into(">I", header, vd + 0x20, 0)
     struct.pack_into(">I", header, 0x39D, 0)  # data file count (0 = single file)
     struct.pack_into(">I", header, 0x3A9, 0)  # volume type: STFS
@@ -116,6 +128,29 @@ def build(title_id, content_type, display_name, magic, files):
     return bytes(out)
 
 
+FILE_TABLE = 0xB000  # data block 0
+
+
+def entry_offset(package, name):
+    for i in range(64):
+        off = FILE_TABLE + i * 0x40
+        length = package[off + 40] & 0x3F
+        if package[off : off + length] == name.encode("ascii"):
+            return off
+    raise KeyError(name)
+
+
+def rename(package, old, new):
+    off = entry_offset(package, old)
+    raw = new.encode("ascii")
+    package[off : off + 40] = raw + b"\0" * (40 - len(raw))
+    package[off + 40] = (package[off + 40] & 0xC0) | len(raw)
+
+
+def set_parent(package, name, parent):
+    struct.pack_into(">H", package, entry_offset(package, name) + 50, parent)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("out")
@@ -123,6 +158,9 @@ def main():
     ap.add_argument("--type", type=lambda v: int(v, 0), default=2)
     ap.add_argument("--name", default="Stand-in content")
     ap.add_argument("--magic", default="LIVE", choices=["LIVE", "PIRS", "CON "])
+    ap.add_argument("--break", dest="damage", choices=[
+        "dotdot", "backslash", "device", "same-name", "parent-zero", "parent-range",
+        "parent-file", "chain", "short"])
     args = ap.parse_args()
 
     big = bytes((i * 7 + (i >> 8)) & 0xFF for i in range(3 * BLOCK + 123))
@@ -132,7 +170,27 @@ def main():
         ("data/sub/empty.bin", b""),
         ("data/sub/small.bin", b"\x01\x02\x03\x04"),
     ]
-    package = build(int(args.title, 16), args.type, args.name, args.magic, files)
+    if args.damage == "dotdot":
+        files.append(("../escape.txt", b"This file must not be written outside the package.\n"))
+    elif args.damage in ("backslash", "device"):
+        files.append(("escape.txt", b"This file must not be written.\n"))
+    elif args.damage == "same-name":
+        files += [("same.txt", b"one\n"), ("SAME.TXT", b"two\n")]
+    package = bytearray(build(int(args.title, 16), args.type, args.name, args.magic, files))
+    if args.damage == "backslash":
+        rename(package, "escape.txt", "..\\..\\escape.txt")
+    elif args.damage == "device":
+        rename(package, "escape.txt", "CON.txt")
+    elif args.damage == "parent-zero":
+        set_parent(package, "readme.txt", 0)
+    elif args.damage == "parent-range":
+        set_parent(package, "pattern.bin", 0x0100)
+    elif args.damage == "parent-file":
+        set_parent(package, "pattern.bin", 0)  # entry 0 is readme.txt
+    elif args.damage == "chain":
+        struct.pack_into(">I", package, 0xA000 + 2 * 0x18 + 0x14, (2 << 30) | 0x000500)  # pattern.bin starts at block 2
+    elif args.damage == "short":
+        del package[-3 * BLOCK:]
     with open(args.out, "wb") as f:
         f.write(package)
     print(f"{args.out}: {len(package)} bytes, title {args.title}, content type {args.type:#x}")

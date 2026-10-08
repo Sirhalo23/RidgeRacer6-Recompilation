@@ -155,11 +155,23 @@ std::atomic<uint32_t> g_groups_whole{0};    // sprite groups moved as one widget
 std::atomic<uint32_t> g_groups_split{0};    // sprite groups too wide: moved command by command
 std::atomic<int64_t> g_last_report_ms{0};
 
+// The counters cost a shared atomic update per 2D command, so they only run
+// while the statistics are switched on.
+bool CountingStats() {
+  return REXCVAR_GET(rr6_hud_stats);
+}
+
+void CountStat(std::atomic<uint32_t>& counter) {
+  if (CountingStats()) {
+    counter.fetch_add(1, std::memory_order_relaxed);
+  }
+}
+
 void CountCommand(int slot) {
-  (tl_sprite_group_depth > 0 ? g_in_group[slot] : g_outside[slot]).fetch_add(1);
-  if (!REXCVAR_GET(rr6_hud_stats)) {
+  if (!CountingStats()) {
     return;
   }
+  (tl_sprite_group_depth > 0 ? g_in_group[slot] : g_outside[slot]).fetch_add(1, std::memory_order_relaxed);
   const int64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(
                           std::chrono::steady_clock::now().time_since_epoch())
                           .count();
@@ -202,7 +214,7 @@ void ShiftVertices(uint8_t* base, const RecordedCommand& command, float shift) {
     const uint32_t address = command.first + 8 * i;
     StoreFloat(base, address, LoadFloat(base, address) + shift);
   }
-  g_shifted.fetch_add(1);
+  CountStat(g_shifted);
 }
 
 // Notes a just-recorded command (float x,y pairs at payload+0xC) of the current
@@ -242,13 +254,13 @@ void LayOutSpriteGroup(uint8_t* base) {
     for (const RecordedCommand& command : tl_group) {
       ShiftVertices(base, command, shift);
     }
-    g_groups_whole.fetch_add(1);
+    CountStat(g_groups_whole);
   } else {
     // Covers both sides of the picture: each command goes to its own side.
     for (const RecordedCommand& command : tl_group) {
       ShiftVertices(base, command, EdgeShift(command.min_x, command.max_x));
     }
-    g_groups_split.fetch_add(1);
+    CountStat(g_groups_split);
   }
   tl_group.clear();
 }

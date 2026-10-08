@@ -2,18 +2,25 @@
 # scripts. The game itself cannot be built here, because that needs the game.
 name: Launcher
 
+# src/** and the checker are included for the check of the game sources below,
+# which is quick and needs no game files.
 on:
   push:
     paths:
       - 'launcher/**'
       - 'linux/**'
+      - 'src/**'
+      - 'tools/check_windows_names.py'
       - 'build-linux.sh'
       - '.github/workflows/launcher.yml'
   pull_request:
     paths:
       - 'launcher/**'
       - 'linux/**'
+      - 'src/**'
+      - 'tools/check_windows_names.py'
       - 'build-linux.sh'
+      - '.github/workflows/launcher.yml'
   workflow_dispatch:
 
 permissions:

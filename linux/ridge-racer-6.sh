@@ -47,8 +47,10 @@ while [ $# -gt 0 ]; do
     --diagnostic) diagnostic=1 ;;
     --wayland) wayland=1 ;;
     --outside-steam) outside_steam=1 ;;
-    --install-dlc) [ -n "${2:-}" ] && dlc+=("$(readlink -f -- "$2")"); shift ;;
-    --install-dlc=*) dlc+=("$(readlink -f -- "${1#--install-dlc=}")") ;;
+    --install-dlc|--install-dlc=*)
+      if [ "$1" = --install-dlc ]; then item="${2:-}"; shift; else item="${1#--install-dlc=}"; fi
+      [ -n "$item" ] || { echo "--install-dlc needs a content file or a folder (try --help)"; exit 2; }
+      dlc+=("$(readlink -f -- "$item")") ;;
     --in-own-terminal) RR6_OWN_TERMINAL=1 ;;
     -h|--help) sed -n '2,24p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *.iso|*.ISO) image="$1" ;;
@@ -166,6 +168,7 @@ if { ! game_ready || [ "$copy_again" = 1 ]; } && [ ! -t 1 ] && [ -z "${RR6_OWN_T
   [ "$diagnostic" = 1 ] && again+=(--diagnostic)
   [ "$wayland" = 1 ] && again+=(--wayland)
   [ "$outside_steam" = 1 ] && again+=(--outside-steam)
+  for item in "${dlc[@]}"; do again+=(--install-dlc "$item"); done
   if have konsole; then exec konsole -e "${again[@]}"
   elif have gnome-terminal; then exec gnome-terminal --wait -- "${again[@]}"
   elif have kgx; then exec kgx -- "${again[@]}"
@@ -428,35 +431,48 @@ clear_leftovers
 #
 # --install-dlc: the game program unpacks the player's own content packages
 # itself (src/dlc_install.cpp in the game's source), writes what it did to
-# dlc-install-result.txt in the save data folder, and closes again.
+# logs/dlc-install-result.txt, and closes again.
 if [ ${#dlc[@]} -gt 0 ]; then
   list=""
   for item in "${dlc[@]}"; do
     list="${list:+$list|}$item"
   done
-  data="${XDG_DATA_HOME:-$HOME/.local/share}/rr6_recomp"
-  rm -f "$data/dlc-install-result.txt"
+  result="$LOGS/dlc-install-result.txt"
+  rm -f "$result"
   echo "Adding downloadable content. A game window opens for a moment and closes again."
   cd "$BIN" || fail "The folder $BIN cannot be entered."
   ./rr6_recomp --game_data_root "$GAME" --gpu_plugin=xenos --fullscreen=false \
-    --log_file "$LOGS/dlc-install.log" "--rr6_install_content=$list" > "$LOGS/dlc-install-console.txt" 2>&1
+    --log_file "$LOGS/dlc-install.log" "--rr6_install_result=$result" \
+    "--rr6_install_content=$list" > "$LOGS/dlc-install-console.txt" 2>&1
   clear_leftovers
-  if [ ! -f "$data/dlc-install-result.txt" ]; then
+  if [ ! -f "$result" ]; then
     fail "The content could not be added: the game program did not report back.
 
 Check that the game itself starts. The log of this attempt is logs/dlc-install.log."
   fi
+  # The game writes the whole file at once, ending with a "done" line; a file
+  # without one was cut off.
   summary="$(awk -F'\t' '
+    NR == 1 { complete = ($0 == "RR6-DLC-INSTALL 1") ? 1 : 0; next }
+    $1 == "done" && NF == 4 { done = 1 }
     $1 == "installed" { added = added "\n    " $2; n++ }
     $1 == "refused" || $1 == "failed" { bad = bad "\n    " $3 ": " $2; m++ }
     END {
-      printf "%d added, %d not added.", n, m
+      if (!(complete && done)) {
+        bad = bad "\n    The game program stopped before it was done (see logs/dlc-install.log)."
+        m++
+        printf "Adding content did not finish (%d added before it stopped).", n
+      } else {
+        printf "%d added, %d not added.", n, m
+      }
       if (n) printf "\n\nAdded:%s", added
       if (m) printf "\n\nNot added:%s", bad
       if (n) printf "\n\nThe game looks for added content each time it starts."
-    }' "$data/dlc-install-result.txt")"
+      exit (m > 0) ? 1 : 0
+    }' "$result")"
+  status=$?
   tell info "$summary"
-  finish 0
+  finish "$status"
 fi
 
 # ------------------------------------- Steam Deck: started from outside Steam

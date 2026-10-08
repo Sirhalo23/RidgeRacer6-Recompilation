@@ -139,7 +139,49 @@ times (Single Race, Lakeshore Drive, class 1): with the stock v0.10.0
 with the two files built from the fork they are textured. Not sent upstream
 yet.
 
-## 8. Smaller observations
+## 8. `ContentManager::InstallContent` trusts the inside of a package
+
+Found by an outside review of this repository (2026-10-07) and checked
+against the fork's source (`src/system/xam/content_manager.cpp`,
+`src/filesystem/devices/stfs_container_device.cpp`):
+
+- Names from the package's file list go into the destination path unchecked.
+  A package with a folder named `..` holding `escape.txt` makes the installer
+  write `escape.txt` next to the package's own folder: tried on the Linux rig
+  with a doctored stand-in package and the build-05 program. Separators inside
+  a name (`..\..\x`) are turned into real ones by
+  `utf8_fix_path_separators`, so a name can reach further up.
+- `ReadSTFS` uses an entry's folder index as an index into the entries read so
+  far without a bounds check (`all_entries[dir_entry.directory_index]`), and
+  dereferences `GetBlockHash`'s result, which is null when a hash table cannot
+  be read.
+- `ExtractEntry` ignores the read status and the byte counts of `fwrite`,
+  ends a file at the first zero-byte read, ignores `fclose`, and writes
+  straight into the final folder, so a full disk gives a short file that
+  counts as installed, and a failed reinstall leaves a mix of old and new.
+- The `.header` record is written from a struct whose padding is not
+  cleared: bytes 0x134-0x137 and 0x144-0x147 hold whatever was on the stack.
+
+This project no longer calls `InstallContent`: `src/dlc_install.cpp` reads the
+package itself with every name, link and block checked, unpacks into a
+staging folder with checked reads and writes, and moves the result into
+place. The same fixes belong in the SDK (a candidate for the fork).
+
+## 9. Other things found while reworking the content installer
+
+- A content folder without its `.header` record makes the game's content
+  listing throw `utf8::invalid_utf16`, and the game ends at once (Linux rig,
+  stand-in package, header removed by hand). `ListContent` falls back to the
+  folder name for such a folder; the exception comes later, when the game
+  enumerates. Not reached through this project's installer, which removes or
+  restores the folder when the record cannot be written.
+- `user_data_root` in the settings file next to the program has no effect:
+  `ReXApp::SetupEnvironment` reads the variable before `LoadConfig` reads that
+  file, so only a `--user_data_root` on the command line moves the folder.
+  The launcher used to take the setting from the file and could look in a
+  different place than the game; it no longer does.
+
+## 10. Smaller observations
 
 - `present_effect` only accepts `bilinear` in the prebuilt Windows runtime
   (FidelityFX is not compiled in), although the help text lists cas/fsr.

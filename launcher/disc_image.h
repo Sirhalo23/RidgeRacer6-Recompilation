@@ -15,6 +15,7 @@ enum class Result {
   kCancelled,
   kCannotOpen,     // the image file could not be opened
   kNotGameDisc,    // no game partition, or no default.xex in it
+  kDamaged,        // the image's list of files is broken (links out of place, a folder inside itself)
   kUnsafeName,     // a file name in the image that must not be written to disk
   kWrongVersion,   // default.xex is not the one this build was made from; detail: its SHA-256
   kNoSpace,        // detail: "<needed bytes> <free bytes>"

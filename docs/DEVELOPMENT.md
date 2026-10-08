@@ -249,8 +249,10 @@ step): user index 0, the SDK logged `XGIUserWriteAchievements: id=1` and
 
 Asked for in issue #2. The SDK already does everything the game needs for
 content that has been unpacked into its folder layout under the user data
-folder, and it has a routine that unpacks a console package into that layout
-(`ContentManager::InstallContent`); nothing calls it. So:
+folder. It also has a routine that unpacks a console package into that layout
+(`ContentManager::InstallContent`), which the first version used; since
+2026-10-07 this file does the unpacking itself, because that routine trusts
+the inside of a package (see "Outside review" below and SDK-NOTES section 8).
 
 - `rr6_recomp --rr6_install_content="<file or folder>|..."` installs and
   leaves. `Rr6RecompApp::LaunchModule` is overridden for it: by then the
@@ -262,13 +264,29 @@ folder, and it has a routine that unpacks a console package into that layout
   (`StfsContainerDevice::ReadPackageHeader`). Accepted: title ID 4E4D07D3,
   content type 2 (marketplace content), an STFS volume. Everything else is
   refused with a reason when the file was named directly. A folder is
-  searched with the folders inside it (six levels, 20,000 files at most), and
-  whatever in it is not content for this game is passed over silently, so the
-  whole copied `Content` folder can be given.
-- Results go to `dlc-install-result.txt` in the user data folder: one line
-  per file, `installed|refused|failed`, a tab, the name or reason, a tab, the
-  file name; the last line is `done` with the three counts. Paths are split
-  on `|`, which a Windows file name cannot contain.
+  searched with the folders inside it (six levels, 50,000 files and folders
+  at most), and whatever in it is not content for this game is passed over
+  silently, so the whole copied `Content` folder can be given. A search that
+  hit a limit or could not open a folder says so in the result.
+- Then the package's own file list is read (the SDK's STFS layout rules,
+  every read checked against the end of the file) and every entry checked
+  before anything is written: plain names only (no separators, no `.` or
+  `..`, no Windows device names, nothing Windows would alter), folders before
+  what is in them, no name twice in a folder, every block of every file
+  inside the package. A package that fails is refused with the reason.
+- The files are unpacked into `<user data>/dlc-staging/<package>` with every
+  read, write and close checked, then moved into place. A copy installed
+  earlier is moved aside first and put back if anything fails; the `.header`
+  record is written last (through `ContentManager::WriteContentHeaderFile`)
+  and its size checked.
+- Results go to the file named by `--rr6_install_result` (the launcher and
+  the Linux script pass `logs/dlc-install-result.txt`; without it,
+  `dlc-install-result.txt` in the user data folder): one line per file,
+  `installed|refused|failed`, a tab, the name or reason, a tab, the file
+  name; the last line is `done` with the three counts. The file is written
+  whole and renamed into place; the launcher and the script treat a file
+  without the first line or the `done` line as an install that stopped part
+  way. Paths are split on `|`, which a Windows file name cannot contain.
 - `dlc-installed.txt` (folder name, tab, shown name) is rewritten at every
   start and after an install. The launcher's list is the folders that exist,
   named from that file.
@@ -282,7 +300,13 @@ folder, and it has a routine that unpacks a console package into that layout
   result.
 
 Tested with `tools/make_test_content.py`, which writes a stand-in package
-(made-up files, real container layout, nothing from any game): two packages
+(`--break KIND` writes one of nine doctored or damaged ones; all nine are
+refused and nothing is written outside the content folder, where the SDK's
+routine wrote the `..` package's file next to the package folder). The
+unpacked files are byte-identical to what the SDK's routine produced, and so
+is the `.header` record apart from the SDK's uncleared padding. Earlier, with
+the SDK's routine: a stand-in package
+(made-up files, real container layout, nothing from any game), two packages
 installed from a file and from a folder with a space in its name, with the
 contents byte-identical afterwards; another game's package, a save, a random
 file and a missing file refused; the game then reports "added 2 items" when
@@ -350,6 +374,50 @@ Saves go to `Documents\rr6_recomp`. Save calls are logged with a `[save]` prefix
    no longer stored (`rr6_save_thumbnail`), and the launcher deletes old ones.
 
 Still to confirm on Windows: progress survives a restart; saving after a race.
+
+## Outside review (2026-10-07)
+
+The repository at 982e212 was given to another AI reviewer with a prompt that
+asked for bugs and optimisations in a fixed report format. It found sixteen
+things; each was checked against the code here before anything changed.
+
+Fixed (branch `review-fixes`):
+
+- DLC installer (RR6-01 to -03, -10, -12): see "Downloadable content" above.
+- Linux `--install-dlc`: kept when the script reopens itself in a terminal
+  (RR6-15); an empty value is an error; the exit status says whether
+  everything was added.
+- Disc copy (RR6-05 to -08): a link in a folder table that leads outside the
+  table or back to an entry already read, and a folder whose table was read
+  already, are now "the disc image is damaged" instead of being skipped (a
+  copy of what could be reached would have looked complete); names ending in
+  `.part`, the two marker names, Windows device names and two names that
+  differ only in case are refused; cancelling works while the tree is read
+  and the executable hashed. The launcher treats `.rr6-copying` as winning
+  over `.rr6-ready`. `prepare-game.ps1` now creates `.rr6-copying` before it
+  writes anything, so an interrupted run is not taken for a complete game on
+  the next start, and it has the same limits and checks. The owner's real
+  disc image (45 files, no folders) passes the stricter reader.
+- Launcher settings (RR6-09): quoted values are decoded properly (escapes,
+  `'literal'` strings) and settings the launcher did not change are written
+  back exactly as they were. It no longer takes `user_data_root` from the
+  settings file, which the game ignores (SDK-NOTES section 9).
+- HUD statistics (RR6-14): counted only while `rr6_hud_stats` is on.
+- CI (RR6-16): the workflow also runs for `src/` and the checker;
+  `tools/check_windows_names.py` skips C++ keywords (`try` is a macro in two
+  rarely used Windows headers).
+
+Not changed:
+
+- RR6-04, links (junctions, symlinks) already inside the game folder are
+  followed by the disc copy: they can only be there if the player put them
+  there.
+- RR6-13, the achievement export and unlock sound run on the drawing thread:
+  a short pause at an unlock at most, not the stuttering in races. Left until
+  a frame-time capture points at it.
+- The rarer disc-name cases of RR6-05 beyond the ones above.
+
+None of it explains the stuttering report (issue #7).
 
 ## Known issues
 

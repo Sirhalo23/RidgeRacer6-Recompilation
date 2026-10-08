@@ -13,6 +13,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $SectorSize = 2048   # PowerShell names are case-insensitive: keep this distinct from $sector below
 $Marker = '.rr6-ready'
+$Copying = '.rr6-copying'   # exists while a copy is unfinished, also after a failed one
 
 function Fail([int]$code, [string]$message) {
     Write-Host ''
@@ -35,7 +36,8 @@ function Test-GameVersion {
 
 # Already extracted (or files supplied by hand)? Then only the version check is needed.
 if (-not $ListOnly -and (Test-Path -LiteralPath (Join-Path $OutDir 'default.xex'))) {
-    if (Test-Path -LiteralPath (Join-Path $OutDir $Marker)) { exit 0 }
+    if ((Test-Path -LiteralPath (Join-Path $OutDir $Marker)) -and
+        -not (Test-Path -LiteralPath (Join-Path $OutDir $Copying))) { exit 0 }
 }
 
 # ---- locate the ISO -------------------------------------------------------
@@ -44,7 +46,7 @@ $isos = @(Get-ChildItem -LiteralPath $IsoDir -File | Where-Object { $_.Extension
 if ($isos.Count -eq 0) {
     # Files without the marker are accepted as supplied by hand, unless the launcher
     # started copying them out of a disc image and did not finish ('.rr6-copying').
-    $unfinished = Test-Path -LiteralPath (Join-Path $OutDir '.rr6-copying')
+    $unfinished = Test-Path -LiteralPath (Join-Path $OutDir $Copying)
     if (-not $unfinished -and (Test-GameVersion)) { Set-Content -LiteralPath (Join-Path $OutDir $Marker) -Value 'ok'; exit 0 }
     Fail 2 ("No .iso file found.`n" +
             "Put your Ridge Racer 6 (USA) Xbox 360 disc image into the '$IsoDir' folder`n" +
@@ -92,22 +94,55 @@ foreach ($candidate in @([long]0xFD90000, [long]0x2080000, [long]0x18300000, [lo
 if ($base -lt 0) { $fs.Close(); Fail 5 'This file is not an Xbox 360 game disc image (no game partition found).' }
 
 # ---- read the directory tree ----------------------------------------------
+# A broken tree is refused rather than read in part: a copy of only the files
+# that could be reached would look complete. The same rules as the launcher's
+# reader (launcher\disc_image.cpp).
+function Fail-Damaged {
+    $fs.Close()
+    Fail 5 ("The disc image is damaged: its list of files is broken, so nothing was copied.`n" +
+            "Make a new copy of the disc image.")
+}
+function Test-SafeName([string]$name) {
+    if ($name -eq '' -or $name -eq '.' -or $name -eq '..') { return $false }
+    foreach ($c in $name.ToCharArray()) {
+        if ([int]$c -lt 0x20 -or [int]$c -ge 0x7F -or '\/:*?"<>|'.IndexOf($c) -ge 0) { return $false }
+    }
+    if ($name.EndsWith('.') -or $name.EndsWith(' ')) { return $false }
+    $lower = $name.ToLowerInvariant()
+    # Names this script uses itself: a file's .part while it is written, and the markers.
+    if ($lower.EndsWith('.part') -or $lower -eq $Marker -or $lower -eq $Copying) { return $false }
+    $stem = $lower.Split('.')[0]
+    if ($stem -match '^(con|prn|aux|nul|com[0-9]|lpt[0-9])$') { return $false }
+    return $true
+}
 $latin1 = [System.Text.Encoding]::GetEncoding(28591)
 $sep = [System.IO.Path]::DirectorySeparatorChar
 $files = New-Object System.Collections.Generic.List[object]
 $folders = New-Object System.Collections.Generic.List[string]
 $pending = New-Object System.Collections.Generic.Stack[object]
-$pending.Push(@{ Sector = $rootSector; Size = $rootSize; Path = '' })
+$pending.Push(@{ Sector = $rootSector; Size = $rootSize; Path = ''; Depth = 0 })
+$folderSectors = @{}   # each folder's table is read once
+$paths = @{}           # hashtable keys compare without regard to case, as Windows does
+$foldersRead = 0
 while ($pending.Count -gt 0) {
     $dir = $pending.Pop()
     if ($dir.Size -eq 0) { continue }
+    # Real discs have a handful of small tables; anything else is not a disc.
+    $foldersRead++
+    if ($dir.Size -gt 16MB -or $foldersRead -gt 10000) {
+        $fs.Close(); Fail 5 'This file is not an Xbox 360 game disc image (its list of files is not one).'
+    }
+    # A folder whose table was read already is a folder inside itself.
+    if ($folderSectors.ContainsKey($dir.Sector) -or $dir.Depth -gt 32) { Fail-Damaged }
+    $folderSectors[$dir.Sector] = $true
     $table = Read-At ($base + [long]$dir.Sector * $SectorSize) ([int]$dir.Size)
     $nodes = New-Object System.Collections.Generic.Stack[int]
     $nodes.Push(0)
     $seen = @{}
     while ($nodes.Count -gt 0) {
         $o = $nodes.Pop()
-        if ($seen.ContainsKey($o) -or ($o + 14) -gt $table.Length) { continue }
+        # Every link has to lead to an entry of this table that was not reached before.
+        if ($seen.ContainsKey($o) -or ($o + 14) -gt $table.Length) { Fail-Damaged }
         $seen[$o] = $true
         $left = [BitConverter]::ToUInt16($table, $o)
         $right = [BitConverter]::ToUInt16($table, $o + 2)
@@ -116,16 +151,23 @@ while ($pending.Count -gt 0) {
         $attributes = $table[$o + 12]
         $nameLength = $table[$o + 13]
         if ($left -eq 0xFFFF -and $right -eq 0xFFFF -and $sector -eq [uint32]::MaxValue) { continue }
+        if (($o + 14 + $nameLength) -gt $table.Length) { Fail-Damaged }
         $name = $latin1.GetString($table, $o + 14, $nameLength)
-        if ($name -eq '' -or $name -eq '.' -or $name -eq '..' -or $name.IndexOfAny([char[]]'\/:*?"<>|') -ge 0) {
+        if ($dir.Path -eq '') { $path = $name } else { $path = $dir.Path + $sep + $name }
+        # Two names that differ only in case would end up as one file on Windows.
+        if (-not (Test-SafeName $name) -or $paths.ContainsKey($path)) {
             $fs.Close(); Fail 6 "The disc image contains an unsafe file name; refusing to extract."
         }
-        if ($dir.Path -eq '') { $path = $name } else { $path = $dir.Path + $sep + $name }
+        if ($path.Length -gt 1000) { Fail-Damaged }
+        $paths[$path] = $true
         if (($attributes -band 0x10) -ne 0) {
             $folders.Add($path)
-            $pending.Push(@{ Sector = $sector; Size = $size; Path = $path })
+            $pending.Push(@{ Sector = $sector; Size = $size; Path = $path; Depth = $dir.Depth + 1 })
         } else {
             $files.Add(@{ Path = $path; Sector = $sector; Size = $size })
+        }
+        if ($files.Count + $folders.Count -gt 200000) {
+            $fs.Close(); Fail 5 'This file is not an Xbox 360 game disc image (its list of files is not one).'
         }
         if ($left -ne 0 -and $left -ne 0xFFFF) { $nodes.Push([int]$left * 4) }
         if ($right -ne 0 -and $right -ne 0xFFFF) { $nodes.Push([int]$right * 4) }
@@ -156,6 +198,10 @@ try {
     }
 } catch [System.ArgumentException] { }   # free-space check is best effort
 
+# Until the end, the folder is marked as an unfinished copy: a stop half way
+# must not leave something that looks like a complete game.
+Set-Content -LiteralPath (Join-Path $OutDir $Copying) -Value 'copying'
+Remove-Item -LiteralPath (Join-Path $OutDir $Marker) -Force -ErrorAction SilentlyContinue
 foreach ($folder in $folders) { [void](New-Item -ItemType Directory -Force -Path (Join-Path $OutDir $folder)) }
 Write-Host ("Extracting {0} files, {1:N1} GB. This happens once and takes a few minutes." -f $files.Count, ($totalBytes / 1GB))
 $chunk = New-Object byte[] (4MB)
@@ -193,6 +239,6 @@ $fs.Close()
 
 if (-not (Test-GameVersion)) { Fail 5 'Extraction finished but default.xex is missing.' }
 Set-Content -LiteralPath (Join-Path $OutDir $Marker) -Value 'ok'
-Remove-Item -LiteralPath (Join-Path $OutDir '.rr6-copying') -Force -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath (Join-Path $OutDir $Copying) -Force -ErrorAction SilentlyContinue
 Write-Host 'Game files are ready.' -ForegroundColor Green
 exit 0
