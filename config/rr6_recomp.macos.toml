@@ -9,6 +9,12 @@ vsync = true
 window_high_pixel_density = false
 async_shader_compilation = true
 
+# vsync above controls guest timing. For optional strict display VSync,
+# uncomment all three settings below and restart (may increase latency).
+# vulkan_allow_present_mode_immediate = false
+# vulkan_allow_present_mode_mailbox = false
+# vulkan_allow_present_mode_fifo_relaxed = false
+
 # Keyboard input can coexist with controllers. Controllers retain analog
 # steering and triggers; SDL handles connection changes and supported rumble.
 mnk_mode = true

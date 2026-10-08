@@ -180,6 +180,15 @@ between runs. Lower presentation resolution does not eliminate shader
 compilation drops, and a sustained frame-rate improvement has not yet been
 measured.
 
+`vsync = true` controls guest vblank timing; it does not force the Vulkan
+presenter's display mode. For optional strict display VSync, add all three
+settings below and restart. This forces FIFO presentation and may increase
+latency; it does not fix shader compilation stalls:
+
+    vulkan_allow_present_mode_immediate = false
+    vulkan_allow_present_mode_mailbox = false
+    vulkan_allow_present_mode_fifo_relaxed = false
+
 ### A single app for testers
 
 After building, run:
@@ -203,6 +212,8 @@ Later launches reuse the complete cache without needing the ISO.
 Extracted files, settings, saves and logs are stored in
 `~/Library/Application Support/Ridge Racer 6/`, outside the app bundle.
 The default settings are copied there once; later launches preserve edits.
+Rebuilding the development target does not update an existing tester app.
+Run `./macos/make-package.sh` again and replace the app from the new ZIP.
 The release launcher uses the existing native `launcher/disc_image.cpp`
 extractor, so there is no runtime Python or SDK installation requirement.
 
@@ -244,6 +255,9 @@ extracted the supported image and rejected malformed/wrong-version test images
 before writing data. Bundle signature verification passes after launch.
 With high-density presentation disabled, the initial window's swapchain was
 verified at 1280x720 with contents scale 1, versus 2560x1440 at scale 2.
-Fullscreen frame-rate comparison still requires an interactive test.
+Fullscreen was also verified at 2560x1440 / scale 1, versus 5120x2880 /
+scale 2 in the earlier log. The optional display VSync settings selected
+FIFO presentation (mode 2). Frame-rate comparison still requires an
+interactive test.
 Intel builds, race rendering, analog steering/triggers, controller reconnect,
 rumble, Xbox hardware and older macOS versions still require verification.
