@@ -72,7 +72,9 @@ The launcher's Display tab:
   has all six; the game's text and menus follow this choice.
 
 The game always runs at 60 frames per second, as it did on Xbox 360.
-While playing: F4 opens more settings, F3 shows frame-rate statistics.
+While playing: F4 opens more settings; press "Save to config" there to keep a
+change for the next start. F3 shows the frame rate. Settings changed in F4
+or in the file by hand are kept when you press Save or Play in the launcher.
 The launcher stores its choices in bin\rr6_recomp.toml.
 
 To leave the game, press Esc: it asks "Quit Ridge Racer 6?". Enter quits,

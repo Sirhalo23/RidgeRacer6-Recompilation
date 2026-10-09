@@ -357,6 +357,36 @@ French, Spanish, Italian, menus and races in each, and the Windows build
 from an object file before the runtime's import library). Asked for in
 issue #2.
 
+## Frame rate (`src/frame_stats.cpp`)
+
+The SDK's F3 window shows "Guest: N FPS (M ms)" only when the program hands
+it a provider (`ReXApp::SetGuestFrameStats`); until 2026-10-09 ours did not,
+so F3 was an empty box for everyone (issue #7 found it). The game ends every
+frame in sub_82259A28, the only caller of VdSwap, which is now hooked to
+count frames. The F3 numbers are measured over half a second; the log gets
+`[fps] N frames per second over the last 30 s, slowest frame M ms` every
+30 seconds, so a bug report carries the player's real frame rate. On the
+Linux rig (software rendering) it reads 2 to 3 frames per second.
+
+## Launcher settings and the F4 window
+
+The SDK's F4 window writes `rr6_recomp.toml` only when its **Save to config**
+button is pressed, and then writes every setting that differs from its
+default. Up to launcher 1.4's first version, the launcher wrote all of its
+settings at every Save or Play from what it had read when it started, and
+recalculated the render size from its own Sharpness choice; a render size
+set in F4 was therefore undone at the next start (issue #15). Now
+`SaveAll` reads the file again, applies only the launcher settings whose
+value differs from what the controls stood for when they were loaded (or
+that the file lacks), keeps everything else, and reloads the controls from
+the result. `LoadIntoControls` takes the Sharpness choice from
+`draw_resolution_scale_y` in the file when that differs from the launcher's
+own note. "Restore default settings" still writes the launcher's settings
+afresh. Checked under Wine: a render size of 3 set outside the launcher
+stays and shows as "3x"; `vsync` and `anisotropic_override` changed in the
+file while the launcher was open survive Save; a language chosen in the
+launcher is written.
+
 ## Display settings
 
 The game stays at its native 60 fps (its speed is tied to the display tick).

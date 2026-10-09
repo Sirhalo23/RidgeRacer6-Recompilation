@@ -69,7 +69,8 @@ writes bin/rr6_recomp.toml with settings chosen for your screen:
   to the screen edges.
 
 To change them, edit bin/rr6_recomp.toml with a text editor (every line is
-explained there), or press F4 in the game. F3 shows frame-rate statistics.
+explained there), or press F4 in the game and then "Save to config" to keep
+the change. F3 shows the frame rate.
 If the game runs slowly, lower draw_resolution_scale_x and _y.
 To have the file written afresh:  ./ridge-racer-6.sh --new-settings
 

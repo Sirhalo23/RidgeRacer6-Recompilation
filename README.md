@@ -212,7 +212,8 @@ names.
 | Numpad 8 2 4 6 | D-pad |
 | I K J L | Right stick |
 
-While playing: F4 opens the settings and F3 shows frame-rate statistics.
+While playing: F4 opens more settings (press **Save to config** there to keep
+changes for the next start), and F3 shows the frame rate.
 
 To leave the game, press Esc, or hold Back + Start on a controller for a
 second. The game asks whether to quit: Enter or A quits, Esc or B goes back.

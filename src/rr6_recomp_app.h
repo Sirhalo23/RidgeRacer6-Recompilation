@@ -9,6 +9,7 @@
 
 #include "achievements.h"
 #include "dlc_install.h"
+#include "frame_stats.h"
 #include "overlay_input.h"
 #include "quit_prompt.h"
 
@@ -58,6 +59,7 @@ class Rr6RecompApp : public rex::ReXApp {
     }
     rr6::AddContentFromDlcFolder(runtime());
     rr6::WriteInstalledContentList(runtime());
+    SetGuestFrameStats(rr6::FrameStatsProvider());  // the F3 window's frame rate
     rex::ReXApp::LaunchModule();
   }
 

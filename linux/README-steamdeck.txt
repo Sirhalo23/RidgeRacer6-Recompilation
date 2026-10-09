@@ -101,7 +101,8 @@ SETTINGS
 --------
 Settings are in bin/rr6_recomp.toml, a text file with every line explained
 (edit it in Desktop Mode with Kate). With a keyboard attached, F4 in the game
-opens a settings window and F3 shows frame-rate statistics.
+opens a settings window ("Save to config" there keeps a change) and F3 shows
+the frame rate.
 
 A sharper picture: set draw_resolution_scale_x and draw_resolution_scale_y
 to 2 (the game is then drawn at 2560x1440 and scaled down). This needs four

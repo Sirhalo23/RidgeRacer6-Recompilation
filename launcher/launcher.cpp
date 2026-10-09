@@ -301,6 +301,12 @@ class Settings {
                                   [&](const Entry& e) { return e.key == key; }),
                    entries_.end());
   }
+  const std::vector<Entry>& entries() const { return entries_; }
+  // The same value as `e` (decoded value and kind), or false if not present.
+  bool Matches(const Entry& e) const {
+    const Entry* mine = Find(e.key);
+    return mine && mine->value == e.value && mine->quoted == e.quoted;
+  }
 
  private:
   const Entry* Find(const std::string& key) const {
@@ -472,6 +478,11 @@ struct App {
   std::wstring prefs_path;  // launcher-only choices
   Settings settings;
   Settings prefs;
+  // What the launcher's controls stood for when they were last loaded or
+  // saved, so that a save writes only what was changed here and keeps what the
+  // game's F4 window or a text editor changed in the file meanwhile.
+  Settings baseline;
+  bool replace_all = false;  // "Restore default settings": write everything
   int screen_w = 1920, screen_h = 1080;
   std::vector<std::string> keys;  // current key list per binding ("Left,A")
   bool ps_names = false;
@@ -590,6 +601,24 @@ void UpdateEnabledStates() {
   }
 }
 
+// The render height multiple a Sharpness choice stands for: 1-4 as chosen, or
+// for Automatic the next whole multiple of 720 lines, except that screens only
+// a little taller than a multiple (768, 900) are not worth the extra work.
+int ScaleForChoice(int choice) {
+  if (choice >= 1) return std::min(4, choice);
+  int scale_y = (int)std::ceil(app.screen_h / 720.0 - 0.25);
+  return std::min(4, std::max(1, scale_y));
+}
+
+// What the controls stand for, as the settings they would write.
+void StoreInto(Settings& s, Settings& p);
+
+void RememberBaseline() {
+  Settings s = app.settings, p = app.prefs;
+  StoreInto(s, p);
+  app.baseline = s;
+}
+
 void LoadIntoControls() {
   const Settings& s = app.settings;
   const Settings& p = app.prefs;
@@ -599,6 +628,12 @@ void LoadIntoControls() {
   std::string scale = p.Get("scale", "auto");
   int scale_index = 0;
   if (scale != "auto") scale_index = std::min(4, std::max(1, atoi(scale.c_str())));
+  // The render size in the file wins over the launcher's own note of the
+  // choice: it may have been changed in the game's F4 window or by hand.
+  const int file_scale = s.GetInt("draw_resolution_scale_y", 0);
+  if (file_scale >= 1 && file_scale <= 4 && file_scale != ScaleForChoice(scale_index)) {
+    scale_index = file_scale;
+  }
   ComboSet(IDC_SCALE, scale_index);
   std::string smooth = s.Get("swap_post_effect", "none");
   ComboSet(IDC_SMOOTH, smooth == "fxaa" ? 1 : smooth == "fxaa_extreme" ? 2 : 0);
@@ -619,9 +654,7 @@ void LoadIntoControls() {
 }
 
 // Works out the settings that depend on the screen and stores everything.
-void StoreFromControls() {
-  Settings& s = app.settings;
-  Settings& p = app.prefs;
+void StoreInto(Settings& s, Settings& p) {
   bool windowed = ComboGet(IDC_SCREEN) == 1;
   bool want_fill = ComboGet(IDC_SHAPE) == 0;
   bool fill = want_fill && !windowed && ScreenIsWide();
@@ -645,12 +678,7 @@ void StoreFromControls() {
   int scale_choice = ComboGet(IDC_SCALE);  // 0 = auto, 1..4 = fixed
   p.Set("scale", scale_choice == 0 ? "auto" : std::to_string(scale_choice), false);
   int scale_y = scale_choice;
-  if (scale_choice == 0) {
-    // Next whole multiple of 720 lines, except that screens only a little
-    // taller than a multiple (768, 900) are not worth the extra work.
-    scale_y = (int)std::ceil(app.screen_h / 720.0 - 0.25);
-    scale_y = std::min(4, std::max(1, scale_y));
-  }
+  if (scale_choice == 0) scale_y = ScaleForChoice(0);
   int scale_x = scale_y;
   if (fill) {
     scale_x = (int)std::ceil(scale_y * aspect / (16.0 / 9.0) - 0.01);
@@ -681,7 +709,34 @@ void StoreFromControls() {
 }
 
 bool SaveAll() {
-  StoreFromControls();
+  // Start from the file as it is now, not as it was when the launcher
+  // started: the game's F4 window ("Save to config") or a text editor may
+  // have changed it since. Of the settings the launcher looks after, only
+  // those changed here are written, plus any the file does not have yet.
+  Settings fresh = app.settings;
+  std::string text;
+  if (!app.replace_all && ReadFileUtf8(app.config_path, &text)) {
+    fresh = Settings();
+    fresh.Parse(text);
+  }
+  Settings wanted = fresh;
+  StoreInto(wanted, app.prefs);
+  if (app.replace_all) {
+    fresh = wanted;
+  } else {
+    for (const Entry& e : wanted.entries()) {
+      if (!fresh.Has(e.key) || !app.baseline.Matches(e)) fresh.Set(e.key, e.value, e.quoted);
+    }
+    for (const char* gone : {"resolution_scale", "hid_mappings_file"}) {
+      if (!wanted.Has(gone)) fresh.Remove(gone);
+    }
+  }
+  app.settings = fresh;
+  app.replace_all = false;
+  // Show what the file now holds (it may differ from the controls where the
+  // file was changed elsewhere), and take that as the new starting point.
+  LoadIntoControls();
+  RememberBaseline();
   bool ok = WriteFileUtf8(
       app.config_path,
       app.settings.Serialize(
@@ -696,6 +751,7 @@ bool SaveAll() {
 void LoadDefaults() {
   app.settings = Settings();
   app.prefs = Settings();
+  app.replace_all = true;
   LoadIntoControls();
   SetStatus(L"Defaults loaded. Press Save or Play to keep them.");
 }
@@ -2508,8 +2564,8 @@ void BuildUi() {
   y += 32;
   AddNote(pg,
           L"The game always runs at 60 frames per second, as it did on Xbox 360.\n"
-          L"If the game runs slowly, choose a lower Sharpness.\n"
-          L"While playing: Esc quits (on a controller, hold Back + Start). F4 opens more settings, F3 shows statistics.",
+          L"If the game runs slowly, choose a lower Sharpness. F3 in the game shows the frame rate.\n"
+          L"Esc quits (hold Back + Start on a controller). F4: more settings (\"Save to config\" keeps them).",
           lx, y, full, 54);
 
   // ---- Controls page ----
@@ -2948,6 +3004,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR command_line, int) {
   LoadArtAtStart();
   BuildUi();
   LoadIntoControls();
+  RememberBaseline();
 
   // "--save-and-exit" writes the settings file with the current choices and
   // quits; used for automated checks.

@@ -28,8 +28,16 @@ repository are not flagged. Details and how to check the file:
 - Copying the game from the disc image refuses a damaged image instead of
   copying the part that could be read, and an interrupted copy made with
   "Play without the launcher" is no longer taken for a finished one.
-- The launcher (version 1.4) keeps settings it does not change exactly as they
-  were.
+- The launcher (version 1.4) keeps settings changed elsewhere. It used to
+  write all of its settings again at every Save or Play, from what it had read
+  when it started, so a render size chosen in the game's F4 window was undone
+  at the next start (issue #15). It now reads the file again first and writes
+  only what was changed in the launcher; the Sharpness choice follows the
+  render size in the file. Lines it does not look after are kept exactly.
+- F3 shows the frame rate. The F3 window was an empty box: the game program
+  never gave it the numbers. The log also gets a line every 30 seconds with
+  the frame rate and the slowest frame, so bug reports show how fast the game
+  ran.
 - Linux: `--install-dlc` is no longer lost when the script reopens itself in a
   terminal on the first start.
 

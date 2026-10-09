@@ -1,6 +1,6 @@
 # Ridge Racer 6 PC - settings (copied next to the exe as rr6_recomp.toml).
 # "RR6 Launcher.exe" edits this file for you; F4 in the game changes settings
-# while playing and F3 shows frame-rate statistics.
+# while playing ("Save to config" keeps a change) and F3 shows the frame rate.
 # Options marked [restart] in that menu take effect the next time the game starts.
 # The game runs at its native 60 fps; these settings only change image quality.
 
