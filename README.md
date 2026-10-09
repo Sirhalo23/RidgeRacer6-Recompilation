@@ -52,7 +52,7 @@ not ask for administrator rights.
 To check that the file is the one published here, compare its SHA-256 with
 `SHA256SUMS.txt` on the release page. In PowerShell, with the file's name:
 
-    Get-FileHash .\RidgeRacer6-PC-v0.1.4.zip
+    Get-FileHash .\RidgeRacer6-PC-v0.1.5.zip
 
 If your antivirus names a threat instead of giving one of the warnings above,
 see the next section.
@@ -111,7 +111,7 @@ That is an explanation, not a guarantee. What you can check yourself:
 
       Get-FileHash .\bin\rexruntime.dll
 
-  v0.1.3 and v0.1.4:
+  v0.1.3 to v0.1.5:
   `172A80FA46F85B2C66E3B517C89C3F8A3CDE298EC7DD4CFC4955BA74FB846E13`,
   the file in `rexglue-sdk-0.10.0.100-win-amd64.zip` on the fork's
   [release page](https://github.com/Sirhalo23/rexglue-sdk/releases/tag/v0.10.0.100).

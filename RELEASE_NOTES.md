@@ -11,7 +11,11 @@ file: 28 of 71 scanners for the SDK's own build of it in v0.1.0 and v0.1.2,
 repository are not flagged. Details and how to check the file:
 [If your antivirus flags rexruntime.dll](README.md#if-your-antivirus-flags-rexruntimedll).
 
-## Not released yet
+## v0.1.5 and Linux test build 06 (2026-10-09)
+
+Inside the Windows zip it calls itself "test build 09". The Linux release has
+the desktop archive only for now; the Steam Deck package of build 06 follows
+once it has been tried on a Deck.
 
 - Language: the game can now be played in any of the disc's six languages
   (English, Japanese, German, French, Spanish, Italian): the launcher's
@@ -40,6 +44,14 @@ repository are not flagged. Details and how to check the file:
   ran.
 - Linux: `--install-dlc` is no longer lost when the script reopens itself in a
   terminal on the first start.
+- Checked on Windows before release: German and Japanese in the menus (in
+  Japanese the menu titles and course names stay in English, as the game's own
+  Japanese text has them), the frame rate in F3 during a race (60), and five
+  music tracks added through the DLC folder and listed under Change BGM. On
+  Linux, with software rendering only: German and Japanese, the DLC folder
+  with stand-in packages, and the `[fps]` log lines.
+- The runtime files are the same as in v0.1.3 and v0.1.4 (our fork of the
+  SDK, v0.10.0.100).
 
 ## v0.1.4 and Linux test build 05 (2026-10-07)
 
