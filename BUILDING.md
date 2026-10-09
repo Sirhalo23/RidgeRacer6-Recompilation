@@ -145,6 +145,15 @@ The shared SDK revision includes the upstream
 [MoltenVK drawable-size fix](https://github.com/KhronosGroup/MoltenVK/commit/4d74f17e0bc44de5db4b6778313c90258dcce634)
 for swapchain recreation leaving the drawable at 1x1 pixels.
 
+The newer MoltenVK 1.4.3 dependency and standalone SDK deployment-target
+update is proposed separately in
+[shared SDK PR #1](https://github.com/Sirhalo23/rexglue-sdk/pull/1).
+To match the feedback-review build while that PR is pending:
+
+    git -C ../rexglue-sdk fetch origin pull/1/head
+    git -C ../rexglue-sdk checkout FETCH_HEAD
+    git -C ../rexglue-sdk submodule update --init --recursive
+
 The SDK builds and stages its Vulkan loader and MoltenVK. From this checkout:
 
     ./build-macos.sh "/path/to/Ridge Racer 6 (USA).iso"
