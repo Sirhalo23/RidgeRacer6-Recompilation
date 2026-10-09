@@ -193,7 +193,44 @@ answers the call from `user_language` instead; the game's own definition of
 rig: with 3 the loading screen is in German, with 2 in Japanese. Answering
 from `user_language` in the SDK itself would be the general fix.
 
-## 11. Smaller observations
+## 11. `XMASetLoopData` reads its argument as a whole context
+
+`XMASetLoopData_entry` (`src/kernel/xboxkrnl/xboxkrnl_audio_xma.cpp`) takes
+its second argument as `ppc_ptr_t<XMA_CONTEXT_DATA>` and copies the loop
+fields out of it, but the caller passes an `XMA_LOOP_DATA`: 12 big-endian
+bytes (start, end, count, subframe end, subframe skip), the same structure
+`XMA_CONTEXT_INIT` embeds and `XMAInitializeContext` reads correctly. The
+bit fields are read in host byte order from the wrong bytes, and the start
+and end from beyond the 12 bytes. RR6 asks for a loop count of 255 and the
+SDK reads 0, so its looping music stops after one pass (RR6 issue #17).
+Upstream's `development` branch has the same code (checked 2026-10-09).
+Fixed in our fork (PR #2 there); the game program also answers the call
+itself (`src/xma_loop_fix.cpp`).
+
+## 12. Short sleeps last 15.6 ms on Windows
+
+`rex::thread::Sleep` calls `::Sleep(ms)`, and nothing in the SDK asks for a
+finer system timer (`timeBeginPeriod` or `NtSetTimerResolution`). Since
+Windows 10 2004 the timer resolution is per process, so a 1 ms sleep lasts
+about 15.6 ms. The guest vertical blank thread polls with 1 ms sleeps and
+catches up on missed ticks, so the guest still gets 60 ticks a second, but
+in uneven steps. The game program asks for 1 ms at start
+(`src/timer_resolution.cpp`); doing it in the SDK, as Xenia does, would
+cover every title.
+
+## 13. Direct3D 12 presentation never waits for the display
+
+`D3D12Presenter::PaintAndPresentImpl` presents with
+`Present(0, DXGI_PRESENT_RESTART | DXGI_PRESENT_ALLOW_TEARING)`, so the
+picture tears, and the guest's vertical blank comes from a timer that knows
+nothing of the display. A vsync forced in the driver then makes the two
+clocks drift and frames are repeated or dropped (RR6 issue #16). Our fork
+adds `vsync_to_display` (PR #2 there): sync interval 1 without the restart
+flag, and the guest vertical blank taken from `IDXGIOutput::WaitForVBlank`
+when the display runs at a whole multiple of the guest rate. Vulkan gets
+FIFO presentation only; it has no equivalent of the display wait yet.
+
+## 14. Smaller observations
 
 - `present_effect` only accepts `bilinear` in the prebuilt Windows runtime
   (FidelityFX is not compiled in), although the help text lists cas/fsr.

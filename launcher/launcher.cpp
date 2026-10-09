@@ -414,6 +414,7 @@ bool IsReservedKey(const std::string& name) {
 enum : int {
   IDC_TAB0 = 100, IDC_TAB1, IDC_TAB2, IDC_TAB3, IDC_TAB4,  // the page buttons in the banner, in page order
   IDC_SCREEN, IDC_SHAPE, IDC_HUD, IDC_SCALE, IDC_SMOOTH, IDC_ANISO, IDC_LANGUAGE, IDC_FOLIAGE,
+  IDC_VSYNC,
   IDC_KEYBOARD, IDC_NAMES, IDC_BINDLIST, IDC_SETKEY, IDC_ADDKEY, IDC_CLEARKEY, IDC_RESETKEYS,
   IDC_PLAY, IDC_SAVE, IDC_DEFAULTS, IDC_LOGS, IDC_SAVES, IDC_DIAG, IDC_STATUS,
   IDC_STOP_COPY, IDC_COPY_AGAIN, IDC_ACH_LIST, IDC_ACH_SOUND,
@@ -486,6 +487,9 @@ struct App {
   int screen_w = 1920, screen_h = 1080;
   std::vector<std::string> keys;  // current key list per binding ("Left,A")
   bool ps_names = false;
+  // The game's runtime (rexruntime.dll) knows vsync_to_display: from our SDK
+  // fork's v0.10.0.101 on. Older ones would ignore the setting.
+  bool runtime_has_vsync = false;
 } app;
 
 std::string captured_key;  // result of the key-capture popup
@@ -514,6 +518,9 @@ void LocateGame() {
   std::wstring exe_dir =
       app.game_exe.empty() ? app.dir : app.game_exe.substr(0, app.game_exe.find_last_of(L'\\') + 1);
   app.config_path = exe_dir + L"rr6_recomp.toml";
+  std::string runtime;
+  app.runtime_has_vsync = ReadFileUtf8(exe_dir + L"rexruntime.dll", &runtime) &&
+                          runtime.find("vsync_to_display") != std::string::npos;
   app.prefs_path = exe_dir + L"rr6_launcher.ini";
 
   const wchar_t* data_candidates[] = {L"game", L"..\\game"};
@@ -595,6 +602,7 @@ void UpdateEnabledStates() {
   bool fill = ComboGet(IDC_SHAPE) == 0 && !windowed && ScreenIsWide();
   EnableWindow(Ctl(IDC_SHAPE), !windowed && ScreenIsWide());
   EnableWindow(Ctl(IDC_HUD), fill);
+  EnableWindow(Ctl(IDC_VSYNC), app.runtime_has_vsync);
   bool keyboard = CheckGet(IDC_KEYBOARD);
   for (int id : {IDC_BINDLIST, IDC_SETKEY, IDC_ADDKEY, IDC_CLEARKEY, IDC_RESETKEYS}) {
     EnableWindow(Ctl(id), keyboard);
@@ -641,6 +649,7 @@ void LoadIntoControls() {
   ComboSet(IDC_ANISO, aniso <= 3 ? 0 : aniso == 4 ? 1 : 2);
   ComboSet(IDC_LANGUAGE, std::min(6, std::max(1, s.GetInt("user_language", 1))) - 1);
   CheckSet(IDC_FOLIAGE, s.GetBool("use_fuzzy_alpha_epsilon", true));
+  CheckSet(IDC_VSYNC, s.GetBool("vsync_to_display", false));
   CheckSet(IDC_KEYBOARD, s.GetBool("mnk_mode", true));
   CheckSet(IDC_DIAG, p.GetBool("diagnostic", false));
   app.ps_names = p.Get("names", "xbox") == "playstation";
@@ -693,6 +702,7 @@ void StoreInto(Settings& s, Settings& p) {
   s.SetInt("anisotropic_override", 3 + std::min(2, std::max(0, ComboGet(IDC_ANISO))));
   s.SetInt("user_language", 1 + std::min(5, std::max(0, ComboGet(IDC_LANGUAGE))));
   s.SetBool("use_fuzzy_alpha_epsilon", CheckGet(IDC_FOLIAGE));
+  if (app.runtime_has_vsync) s.SetBool("vsync_to_display", CheckGet(IDC_VSYNC));
 
   // Keyboard: the game treats it as one more controller. The mouse is left
   // alone (mnk_mouse would capture the pointer for the right stick).
@@ -2528,40 +2538,46 @@ void BuildUi() {
   HWND pg = app.page[0];
   const int lx = 24, cx = 250, cw = 446, full = 672;
   const int prose = 540;  // explanatory text keeps to a comfortable line length
-  int y = 22;
+  int y = 18;
+  const int row = 31;  // combo rows
   wchar_t detected[160];
   swprintf(detected, 160, L"Fill my screen (%d x %d detected)", app.screen_w, app.screen_h);
 
   Add(pg, L"STATIC", L"Screen", 0, lx, y + 4, 210, 20, -1);
   AddCombo(pg, cx, y, cw, IDC_SCREEN, {L"Full screen", L"Window"});
-  y += 34;
+  y += row;
   Add(pg, L"STATIC", L"Picture shape", 0, lx, y + 4, 210, 20, -1);
   AddCombo(pg, cx, y, cw, IDC_SHAPE, {detected, L"Original 16:9 (bars at the sides)"});
-  y += 34;
+  y += row;
   Add(pg, L"STATIC", L"HUD position on wide screens", 0, lx, y + 4, 210, 20, -1);
   AddCombo(pg, cx, y, cw, IDC_HUD, {L"At the screen edges", L"Centred, where 16:9 would put it"});
-  y += 34;
+  y += row;
   Add(pg, L"STATIC", L"Sharpness (render size)", 0, lx, y + 4, 210, 20, -1);
   AddCombo(pg, cx, y, cw, IDC_SCALE,
            {L"Automatic (match my screen)", L"1x - 720 lines, as on Xbox 360 (fastest)",
             L"2x - 1440 lines", L"3x - 2160 lines (4K)", L"4x - 2880 lines (very demanding)"});
-  y += 34;
+  y += row;
   Add(pg, L"STATIC", L"Edge smoothing", 0, lx, y + 4, 210, 20, -1);
   AddCombo(pg, cx, y, cw, IDC_SMOOTH, {L"Off", L"FXAA", L"FXAA Extreme"});
-  y += 34;
+  y += row;
   Add(pg, L"STATIC", L"Texture detail", 0, lx, y + 4, 210, 20, -1);
   AddCombo(pg, cx, y, cw, IDC_ANISO, {L"Standard (4x)", L"High (8x)", L"Highest (16x)"});
-  y += 34;
+  y += row;
   // The disc's six languages, in the console's numbering (user_language 1-6;
   // src/language.cpp in the game answers the game's question with it).
   Add(pg, L"STATIC", L"Language", 0, lx, y + 4, 210, 20, -1);
   AddCombo(pg, cx, y, cw, IDC_LANGUAGE,
            {L"English", L"\u65E5\u672C\u8A9E (Japanese)", L"Deutsch (German)",
             L"Fran\u00E7ais (French)", L"Espa\u00F1ol (Spanish)", L"Italiano (Italian)"});
-  y += 36;
+  y += 33;
   Add(pg, L"BUTTON", L"Fix flickering trees and foliage (recommended, needed on NVIDIA cards)",
       BS_AUTOCHECKBOX | WS_TABSTOP, lx, y, full, 22, IDC_FOLIAGE);
-  y += 32;
+  y += 26;
+  // vsync_to_display (our SDK fork): no tearing, and the game's 60 Hz clock
+  // follows the screen's on 60 and 120 Hz screens (issue #16).
+  Add(pg, L"BUTTON", L"Sync to my screen: no tearing (best on 60 or 120 Hz screens)",
+      BS_AUTOCHECKBOX | WS_TABSTOP, lx, y, full, 22, IDC_VSYNC);
+  y += 30;
   AddNote(pg,
           L"The game always runs at 60 frames per second, as it did on Xbox 360.\n"
           L"If the game runs slowly, choose a lower Sharpness. F3 in the game shows the frame rate.\n"

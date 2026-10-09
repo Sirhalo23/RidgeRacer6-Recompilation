@@ -28,14 +28,17 @@
 // pixel space, far enough that after the narrowing above it lands at the
 // screen edge.
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cmath>
 #include <cstdint>
+#include <mutex>
 #include <vector>
 
 #include <rex/cvar.h>
 #include <rex/hook.h>
+#include <rex/logging.h>
 #include <rex/ppc/context.h>
 
 #include "generated/default/rr6_recomp_init.h"
@@ -370,4 +373,127 @@ REX_HOOK_RAW(sub_82145FD0) {
 REX_HOOK_RAW(sub_82146288) {
   __imp__sub_82146288(ctx, base);
   CountCommand(2);
+}
+
+// ---- 3D views drawn into part of the picture (rear-view mirror) ---------------
+//
+// The rear-view mirror is a second 3D view drawn into a small rectangle of the
+// same 1280x720 frame, inside a 2D frame. The presenter stretches the frame
+// sideways and the 2D frame is narrowed back (above), but the 3D rectangle is
+// set with D3DDevice_SetViewport (sub_82257488) and was not, so the mirror's
+// picture came out wider than its frame by the stretch factor (issue #12).
+// Every viewport that covers only part of the 1280x720 frame is narrowed here
+// around the centre, the same way as the 2D layer.
+
+REXCVAR_DEFINE_BOOL(rr6_viewport_fix, true, "RR6",
+                    "With rr6_hud_fix: narrow 3D views that fill only part of the picture (the "
+                    "rear-view mirror) to match their narrowed frames.");
+
+REXCVAR_DEFINE_BOOL(rr6_viewport_log, false, "RR6",
+                    "Diagnostic: log each new viewport the game sets, with the size of the "
+                    "surface it draws to.");
+
+namespace {
+
+struct Viewport {
+  uint32_t x = 0, y = 0, width = 0, height = 0;
+};
+
+// The size of the surface the device draws to, worked out as
+// D3DDevice_SetViewport does it (it clamps the viewport to that size).
+bool RenderTargetSize(uint8_t* base, uint32_t device, uint32_t& width, uint32_t& height) {
+  uint32_t surface = REX_LOAD_U32(device + 12536);
+  if (surface == 0) {
+    surface = REX_LOAD_U32(device + 12552);
+    if (surface == 0) {
+      return false;
+    }
+  }
+  bool same_as_saved = (REX_LOAD_U8(device + 10432) & 0x10) != 0;
+  for (uint32_t i = 0; same_as_saved && i < 5; ++i) {
+    const uint32_t current = REX_LOAD_U32(device + 12536 + 4 * i);
+    const uint32_t saved = REX_LOAD_U32(device + 12972 + 4 * i);
+    if (current != saved && current != 0) {
+      same_as_saved = false;
+    }
+  }
+  if (same_as_saved) {
+    width = REX_LOAD_U32(device + 13476);
+    height = REX_LOAD_U32(device + 13480);
+  } else {
+    const uint32_t info = REX_LOAD_U32(surface + 24);
+    width = (info & 0x1FFF) + 1;
+    height = ((info >> 13) & 0x1FFF) + 1;
+  }
+  return true;
+}
+
+void LogViewport(const Viewport& v, uint32_t rt_width, uint32_t rt_height, uint32_t caller,
+                 bool narrowed) {
+  static std::mutex mutex;
+  static std::vector<uint64_t> seen;
+  const uint64_t key = (uint64_t(v.x) << 48) ^ (uint64_t(v.y) << 36) ^ (uint64_t(v.width) << 24) ^
+                       (uint64_t(v.height) << 12) ^ rt_width ^ (uint64_t(caller) << 20);
+  std::lock_guard<std::mutex> lock(mutex);
+  if (seen.size() >= 200 || std::find(seen.begin(), seen.end(), key) != seen.end()) {
+    return;
+  }
+  seen.push_back(key);
+  REXLOG_INFO("[viewport] {}x{} at {},{} on a {}x{} surface, from {:08X}{}", v.width, v.height,
+              v.x, v.y, rt_width, rt_height, caller, narrowed ? ", narrowed" : "");
+}
+
+}  // namespace
+
+// D3DDevice_SetViewport(device, const D3DVIEWPORT9* viewport)
+REX_HOOK_RAW(sub_82257488) {
+  const uint32_t device = ctx.r3.u32;
+  const uint32_t source = ctx.r4.u32;
+  const bool log = REXCVAR_GET(rr6_viewport_log);
+  const bool fix = REXCVAR_GET(rr6_viewport_fix) && REXCVAR_GET(rr6_hud_fix) &&
+                   TargetAspect() > kOriginalAspect;
+  if ((!fix && !log) || device == 0 || source == 0) {
+    __imp__sub_82257488(ctx, base);
+    return;
+  }
+  Viewport v{REX_LOAD_U32(source + 0), REX_LOAD_U32(source + 4), REX_LOAD_U32(source + 8),
+             REX_LOAD_U32(source + 12)};
+  uint32_t rt_width = 0, rt_height = 0;
+  const bool known = RenderTargetSize(base, device, rt_width, rt_height);
+  // Only the game's own 1280x720 frame is stretched by the presenter, and a
+  // view covering its whole width (the race, split screen) is already right.
+  const bool narrow = fix && known && rt_width == 1280 && rt_height == 720 && v.width > 0 &&
+                      v.width < rt_width && v.x < rt_width;
+  if (log) {
+    LogViewport(v, rt_width, rt_height, static_cast<uint32_t>(ctx.lr), narrow);
+  }
+  if (!narrow) {
+    __imp__sub_82257488(ctx, base);
+    return;
+  }
+  const double k = kOriginalAspect / TargetAspect();
+  const double centre = rt_width / 2.0;
+  const double left = centre + (double(v.x) - centre) * k;
+  const double right = centre + (double(v.x) + double(v.width) - centre) * k;
+  const uint32_t new_x = static_cast<uint32_t>(std::lround(std::max(0.0, left)));
+  const uint32_t new_right = static_cast<uint32_t>(std::lround(std::min(double(rt_width), right)));
+  if (new_right <= new_x) {
+    __imp__sub_82257488(ctx, base);
+    return;
+  }
+  // The caller's viewport may be kept and passed again every frame, so it is
+  // left alone: a narrowed copy goes on the guest stack below the caller's
+  // frame, which is free until the call returns.
+  const uint32_t saved_sp = ctx.r1.u32;
+  ctx.r1.u32 = (saved_sp - 64) & ~15u;
+  const uint32_t copy = ctx.r1.u32 + 16;
+  REX_STORE_U32(copy + 0, new_x);
+  REX_STORE_U32(copy + 4, v.y);
+  REX_STORE_U32(copy + 8, new_right - new_x);
+  REX_STORE_U32(copy + 12, v.height);
+  REX_STORE_U32(copy + 16, REX_LOAD_U32(source + 16));  // MinZ
+  REX_STORE_U32(copy + 20, REX_LOAD_U32(source + 20));  // MaxZ
+  ctx.r4.u64 = copy;
+  __imp__sub_82257488(ctx, base);
+  ctx.r1.u32 = saved_sp;
 }

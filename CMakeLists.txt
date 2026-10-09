@@ -28,6 +28,8 @@ set(RR6RECOMP_SOURCES
     src/dlc_install.cpp
     src/language.cpp
     src/frame_stats.cpp
+    src/xma_loop_fix.cpp
+    src/timer_resolution.cpp
 )
 
 if(WIN32)
@@ -39,8 +41,8 @@ endif()
 # The Xenos GPU plugin is loaded at runtime (--gpu_plugin=xenos); stage it next to the exe.
 rexglue_setup_target(rr6_recomp GPU_PLUGINS xenos)
 
-# The achievement sound: played with the Windows multimedia library there, and
-# kept next to the program (sounds/achievement.wav) everywhere.
+# The Windows multimedia library: the achievement sound (kept next to the
+# program as sounds/achievement.wav everywhere) and the 1 ms timer.
 if(WIN32)
     target_link_libraries(rr6_recomp PRIVATE winmm)
 endif()
