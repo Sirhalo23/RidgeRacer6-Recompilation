@@ -78,7 +78,10 @@ def package(build, sdk, arch, output):
         launcher = binary / "rr6-launcher"
         run("xcrun", "clang++", "-std=c++17", "-O2", "-Wall", "-Wextra", "-Werror",
             "-fobjc-arc", "-arch", arch, f"-mmacosx-version-min={minimum}", "-framework", "Cocoa",
-            ROOT / "macos/launcher.mm", ROOT / "launcher/disc_image.cpp", "-o", launcher)
+            "-framework", "UniformTypeIdentifiers", "-I", sdk / "thirdparty/sdl3/include",
+            ROOT / "macos/launcher.mm", ROOT / "macos/settings.cpp",
+            ROOT / "launcher/disc_image.cpp", "-L", binary, "-lrexruntime",
+            "-Wl,-rpath,@executable_path", "-o", launcher)
         code.append(launcher)
 
         # No dependency on a developer machine's SDK, Homebrew or build tree.
@@ -123,19 +126,29 @@ def package(build, sdk, arch, output):
             f"Ridge Racer 6 — experimental macOS {arch} build\n"
             f"Minimum macOS for this particular build: {minimum}\n\n"
             "Put this app beside your Ridge Racer 6 USA ISO and double-click it.\n"
-            "If the image cannot be located automatically, choose it in the file picker.\n"
-            "First launch verifies the disc executable and copies about 6 GB of files.\n"
+            "The native launcher opens before the game. Choose options, then Play.\n"
+            "If the image cannot be located automatically, Play asks you to choose it.\n"
+            "First Play verifies the disc executable and copies about 6 GB of files.\n"
             "Later launches reuse the extracted copy; the ISO is no longer needed.\n"
             "Game files, settings, saves and logs are kept in\n"
             "~/Library/Application Support/Ridge Racer 6/.\n\n"
             "Put your own DLC content packages in that folder's DLC subfolder.\n"
             "New or changed packages are checked and installed at game startup.\n"
-            "Set user_language in rr6_recomp.toml, then restart:\n"
-            "1 English, 2 Japanese, 3 German, 4 French, 5 Spanish, 6 Italian.\n\n"
-            "Pair a controller over Bluetooth or connect USB. F4 opens settings.\n"
+            "Display offers language, full screen/windowed mode, render resolution,\n"
+            "Retina output, optional display VSync, smoothing and texture filtering.\n"
+            "Save Settings or Play applies edits; unrelated custom settings are retained.\n"
+            "The launcher returns when the game closes and reloads F4 changes.\n\n"
+            "Pair a controller over Bluetooth or connect USB. Controls shows connected\n"
+            "devices, sticks, triggers, held buttons and an optional vibration test.\n"
+            "The controller selector is for testing, not player assignment.\n"
+            "Select a keyboard row and Set Key, or edit comma-separated key names.\n"
+            "Xbox/PlayStation labels are a reference; in-game prompts stay Xbox.\n"
+            "Game Files has ISO import and shortcuts to data, DLC and logs.\n"
+            "F4 opens advanced in-game settings; F3 shows statistics.\n"
             "Defaults use 720p guest rendering and a logical-resolution presentation buffer.\n"
-            "For sharper Retina output, set window_high_pixel_density = true in\n"
-            "rr6_recomp.toml and restart. Existing config files are preserved.\n"
+            "For sharper output, choose High density in the Retina output option.\n"
+            "Higher render resolutions are experimental and use more GPU memory.\n"
+            "VSync can add latency and does not eliminate shader compilation stalls.\n"
             "Async shader compilation remains enabled; retain caches between runs.\n"
             "Race rendering, full controller behavior and older OS versions still need testing.\n"
             "This test package is ad-hoc signed, not notarized.\n", encoding="utf-8")

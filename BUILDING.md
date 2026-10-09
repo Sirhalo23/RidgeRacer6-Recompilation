@@ -219,8 +219,9 @@ the app. It contains no ISO or extracted disc files. Python and Xcode are
 needed to make the package, but not on the machine running it.
 
 Put the unpacked app beside the user's Ridge Racer 6 USA ISO and double-click
-it. When exactly one ISO is beside the app it is selected automatically;
-otherwise a native file picker asks for it. First launch validates the
+it. A native macOS launcher opens with Display, Controls and Game Files tabs,
+Save Settings and Play. When exactly one ISO is beside the app, the first Play
+selects it automatically; otherwise a native file picker asks for it. First Play validates the
 executable against the supported USA SHA-256 and copies about 6 GB of files.
 A progress window allows cancellation, and interrupted copies can resume.
 Later launches reuse the complete cache without needing the ISO.
@@ -232,6 +233,46 @@ Rebuilding the development target does not update an existing tester app.
 Run `./macos/make-package.sh` again and replace the app from the new ZIP.
 The release launcher uses the existing native `launcher/disc_image.cpp`
 extractor, so there is no runtime Python or SDK installation requirement.
+
+The Display tab offers language, full screen/windowed mode, render scale,
+logical-resolution or Retina output, optional display VSync, FXAA, anisotropic
+filtering and asynchronous shader compilation. The recommended starting point
+is 1x (720p) and logical-resolution output. Higher scales are experimental on
+Vulkan/MoltenVK and consume more GPU memory. Display VSync controls the three
+present-mode flags above; it leaves the game's `vsync` timing setting alone.
+Custom values outside the offered presets are displayed as custom and retained
+until that control is changed. Startup window size is deliberately not exposed:
+the current SDK also uses non-default window dimensions as a guest video mode.
+
+The Controls tab uses the same bundled SDL3 runtime and controller database as
+the game. Select a connected controller to see stick positions, analog trigger
+values and held buttons; Test Vibration is enabled when SDL reports support.
+Device detection refreshes automatically. This selection is for testing only;
+the game assigns controllers using its existing connection order. The preview
+releases its devices before Play and resumes when the game closes. Xbox and
+PlayStation button names are a launcher reference; the game's prompts stay Xbox.
+Keyboard input can be enabled alongside controllers. Select a row and Set Key
+to capture a shortcut, or edit comma-separated bindings directly. Escape cancels
+capture; Command shortcuts are reserved for macOS. Reset Keyboard restores the
+macOS template's bindings. Controller inputs themselves retain SDL's mappings.
+
+Save Settings and Play write only changed options to the existing settings file
+with an atomic replacement, retaining unrelated values, comments and tables.
+The file is re-read before saving to preserve other edits. Play runs the bundled
+game as a child process and returns to the launcher on exit, reloading settings
+changed through F4. Game Files offers ISO import and Finder shortcuts to the
+external data, DLC and log folders. The launcher does not change the desktop's
+display mode or delete saves or shader caches.
+
+For CLI testing, `Contents/MacOS/rr6-launcher --play` bypasses the settings
+window. `--data-root /absolute/folder` selects an isolated data directory;
+`--prepare-only image.iso` performs a headless import. Pass game options after
+`--`, for example `--play -- --user_language=1`. Explicit game flags override
+the launcher's default paths. The native settings tests can be run separately:
+
+    xcrun clang++ -std=c++17 -Wall -Wextra -Werror -fsanitize=address,undefined \
+      macos/settings.cpp macos/settings_test.cpp -o /tmp/rr6-launcher-settings-test
+    /tmp/rr6-launcher-settings-test
 
 The launcher creates `~/Library/Application Support/Ridge Racer 6/DLC/`
 and passes it as `rr6_dlc_folder`. Put your own content packages there;
