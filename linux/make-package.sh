@@ -39,7 +39,9 @@ esac
 
 assemble() {  # assemble <folder name> <readme> <kind text> [deck]
   local dir="$WORK/$1"
-  mkdir -p "$dir/bin" "$dir/tools" "$dir/licenses"
+  mkdir -p "$dir/bin" "$dir/tools" "$dir/licenses" "$dir/DLC"
+  # Empty but for its note: players put their own content files there.
+  sed 's/\\/\//g' package/DLC/PUT-CONTENT-FILES-HERE.txt > "$dir/DLC/PUT-CONTENT-FILES-HERE.txt"
   install -m 755 linux/ridge-racer-6.sh "$dir/ridge-racer-6.sh"
   install -m 755 linux/collect-report.sh "$dir/tools/collect-report.sh"
   # The build number goes into the title; the line under it follows its length.
@@ -65,6 +67,12 @@ assemble() {  # assemble <folder name> <readme> <kind text> [deck]
   local bad
   bad="$(find "$dir" -type f \( -iname '*.xex' -o -iname '*.iso' -o -iname '*.sfd' -o -iname '*.dat' -o -iname '*.bin' -o -iname '*.xpso' \) -o -type f -size +60M)"
   [ -z "$bad" ] || { echo "Refusing to pack, this looks like game data: $bad"; exit 1; }
+  # Content packages have no extension; they start with LIVE, PIRS or "CON ".
+  while IFS= read -r -d '' f; do
+    case "$(head -c 4 "$f")" in
+      LIVE|PIRS|"CON ") echo "Refusing to pack a content package: $f"; exit 1 ;;
+    esac
+  done < <(find "$dir" -type f -print0)
   tar -C "$WORK" --sort=name --owner=0 --group=0 --numeric-owner -czf "$OUT/$1.tar.gz" "$1"
   echo "Made: $OUT/$1.tar.gz ($(du -h "$OUT/$1.tar.gz" | cut -f1))"
 }

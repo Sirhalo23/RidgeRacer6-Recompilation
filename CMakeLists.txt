@@ -26,6 +26,8 @@ set(RR6RECOMP_SOURCES
     src/depth_bias_fix.cpp
     src/lod_bias_fix.cpp
     src/dlc_install.cpp
+    src/language.cpp
+    src/frame_stats.cpp
 )
 
 if(WIN32)

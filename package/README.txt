@@ -68,9 +68,13 @@ The launcher's Display tab:
 - Sharpness: how large the game is drawn internally. Automatic matches your
   screen. Lower it if the game runs slowly.
 - Edge smoothing, Texture detail: optional image-quality extras.
+- Language: English, Japanese, German, French, Spanish or Italian. The disc
+  has all six; the game's text and menus follow this choice.
 
 The game always runs at 60 frames per second, as it did on Xbox 360.
-While playing: F4 opens more settings, F3 shows frame-rate statistics.
+While playing: F4 opens more settings; press "Save to config" there to keep a
+change for the next start. F3 shows the frame rate. Settings changed in F4
+or in the file by hand are kept when you press Save or Play in the launcher.
 The launcher stores its choices in bin\rr6_recomp.toml.
 
 To leave the game, press Esc: it asks "Quit Ridge Racer 6?". Enter quits,
@@ -122,14 +126,18 @@ one, a pop-up appears with a sound, and it is remembered.
 
 DOWNLOADABLE CONTENT
 --------------------
-If you own downloadable content for Ridge Racer 6, the launcher's DLC page
-can add it to the game.
+If you own downloadable content for Ridge Racer 6, you can add it to the
+game: put the files in the DLC folder (next to RR6 Launcher.exe), or use the
+launcher's DLC page.
 
 - You need the content files from your own Xbox 360's storage. They are in
   the folder Content\0000000000000000\4E4D07D3\00000002 and have long names
   without an extension; keep those names. A PC cannot read an Xbox 360 drive directly; a reader
   program for the console's disk format is needed to copy them off.
-- On the DLC page press "Add content files..." and choose them, or
+- The DLC folder: copy the files into it (folders inside it are searched
+  too). Each time the game starts, it adds the files that are new or have
+  changed; that takes a few seconds the first time.
+- Or, on the DLC page, press "Add content files..." and choose them, or
   "Add a folder..." for a folder that holds them. The folders inside it are
   searched too, so the copied Content folder itself will do. A game window
   opens for a moment and closes again; the launcher then says what was added.
@@ -137,7 +145,8 @@ can add it to the game.
   chosen by itself is refused with a reason; in a folder, anything that is
   not Ridge Racer 6 content is passed over.
 - The game looks for added content each time it starts. To remove content,
-  delete its folder ("Open content folder" on the DLC page).
+  delete its folder ("Open content folder" on the DLC page), and take its
+  file out of the DLC folder if it is there.
 - Added music appears under "Change BGM" on the screen before a race, as
   "Player Disc".
 - This is new. Five of the downloadable music tracks have been added and
