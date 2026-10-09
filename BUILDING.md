@@ -115,3 +115,231 @@ of the machine it was built on, whichever is newer.
 
 `tools/linux-rig/README.md` describes how the game is run without a graphics
 card for automated checks.
+
+## macOS
+
+The native build uses the SDK's SDL3 window, audio and controller backends,
+with Vulkan translated to Metal by MoltenVK. Both `mac-arm64-release` (Apple
+Silicon) and `mac-amd64-release` (Intel) presets are available. Build on the
+Mac you will run on.
+
+Install Xcode 16 or newer with its command-line tools, CMake 3.25 or newer,
+Ninja and Python 3. With Homebrew: `brew install cmake ninja python`.
+
+Use the project's shared
+[ReXGlue SDK fork](https://github.com/Sirhalo23/rexglue-sdk), branch `rr6`,
+as Windows and Linux do. It includes the macOS source-build, presentation
+and density-control changes from
+[SDK PR #487](https://github.com/rexglue/rexglue-sdk/pull/487), plus the Vulkan
+texture-exponent fix needed for correct track textures. PR #487 was closed
+because upstream development already addresses its core build/presentation
+issues; the shared fork also retains the optional density control.
+This project uses the SDK through `REXSDK_DIR`; it does not patch the SDK.
+Place a source checkout next to this repository:
+
+    git clone --branch rr6 https://github.com/Sirhalo23/rexglue-sdk.git ../rexglue-sdk
+    git -C ../rexglue-sdk checkout e4a7f75499071fa773d16a099b3ec2b4f941f786
+    git -C ../rexglue-sdk submodule update --init --recursive
+
+The shared SDK revision includes the upstream
+[MoltenVK drawable-size fix](https://github.com/KhronosGroup/MoltenVK/commit/4d74f17e0bc44de5db4b6778313c90258dcce634)
+for swapchain recreation leaving the drawable at 1x1 pixels.
+
+The newer MoltenVK 1.4.3 dependency and standalone SDK deployment-target
+update is proposed separately in
+[shared SDK PR #1](https://github.com/Sirhalo23/rexglue-sdk/pull/1).
+To match the feedback-review build while that PR is pending:
+
+    git -C ../rexglue-sdk fetch origin pull/1/head
+    git -C ../rexglue-sdk checkout FETCH_HEAD
+    git -C ../rexglue-sdk submodule update --init --recursive
+
+The SDK builds and stages its Vulkan loader and MoltenVK. From this checkout:
+
+    ./build-macos.sh "/path/to/Ridge Racer 6 (USA).iso"
+    ./run-macos.sh
+
+The ISO argument is optional if the extracted disc already exists in
+`../game`. The script verifies the executable hash, builds the recompiler,
+generates the guest C++, reconfigures CMake to include those sources, and
+builds the game. `REXSDK_DIR` selects another SDK source location;
+`RR6_BUILD_JOBS` controls parallel compilation (default 8). `CMAKE` and
+`PYTHON` can select tools installed outside `PATH`.
+The macOS presets target macOS 14.0 for both the game and source-built SDK
+dependencies. `RR6_MACOS_DEPLOYMENT_TARGET` can override that value when using
+the build script; both configure passes apply it. Do not lower the target
+without checking the resulting binaries and testing on that OS.
+
+The app bundle is `out/build/mac-arm64-release/rr6_recomp.app` (or
+`mac-amd64-release` on Intel). Use the launch script to provide the game-data
+path. The executable and runtime libraries are inside `Contents/MacOS`.
+First build copies macOS defaults to
+`rr6_recomp.toml` beside the executable; later builds preserve your settings.
+The launch script stores saves and caches in `out/userdata`, and writes
+`logs/run-macos.log`. F4 opens settings and F3 opens statistics. Initial
+rendering scale is native 720p. The shared SDK's texture-exponent fix lets the
+game retain its original texture LOD bias, as on Windows. The macOS default
+disables the zero-LOD-bias workaround, including source builds whose version
+suffix is a commit count rather than the fork's package number.
+
+The macOS defaults set `window_high_pixel_density = false`, using a logical
+resolution presentation buffer rather than a Retina/HiDPI buffer. This
+leaves the desktop display mode and the game's 720p rendering unchanged.
+At 2x display density, it reduces the presentation pixel count by 75%, with
+softer UI and output. Set it to `true` and restart to restore high-density
+presentation. Existing settings are preserved, so add the setting manually
+when upgrading an older build.
+
+`async_shader_compilation = true` remains enabled. New screens can briefly
+skip presentation while shader pipelines compile; keep the user-data cache
+between runs. Lower presentation resolution does not eliminate shader
+compilation drops, and a sustained frame-rate improvement has not yet been
+measured.
+
+`vsync = true` controls guest vblank timing; it does not force the Vulkan
+presenter's display mode. For optional strict display VSync, add all three
+settings below and restart. This forces FIFO presentation and may increase
+latency; it does not fix shader compilation stalls:
+
+    vulkan_allow_present_mode_immediate = false
+    vulkan_allow_present_mode_mailbox = false
+    vulkan_allow_present_mode_fifo_relaxed = false
+
+### A single app for testers
+
+After building, run:
+
+    ./macos/make-package.sh
+
+This creates `dist/RidgeRacer6-macOS-arm64-test.zip` (or `x86_64` on Intel),
+containing one `Ridge Racer 6.app`. The package uses a whitelist of runtime
+files rather than copying the development bundle, audits linked libraries,
+includes third-party licenses, strips local/debug symbols and ad-hoc signs
+the app. It contains no ISO or extracted disc files. Python and Xcode are
+needed to make the package, but not on the machine running it.
+
+Put the unpacked app beside the user's Ridge Racer 6 USA ISO and double-click
+it. A native macOS launcher opens with Display, Controls and Game Files tabs,
+Save Settings and Play. When exactly one ISO is beside the app, the first Play
+selects it automatically; otherwise a native file picker asks for it. First Play validates the
+executable against the supported USA SHA-256 and copies about 6 GB of files.
+A progress window allows cancellation, and interrupted copies can resume.
+Later launches reuse the complete cache without needing the ISO.
+
+Extracted files, settings, saves and logs are stored in
+`~/Library/Application Support/Ridge Racer 6/`, outside the app bundle.
+The default settings are copied there once; later launches preserve edits.
+Rebuilding the development target does not update an existing tester app.
+Run `./macos/make-package.sh` again and replace the app from the new ZIP.
+The release launcher uses the existing native `launcher/disc_image.cpp`
+extractor, so there is no runtime Python or SDK installation requirement.
+
+The Display tab offers language, full screen/windowed mode, render scale,
+logical-resolution or Retina output, optional display VSync, FXAA, anisotropic
+filtering and asynchronous shader compilation. The recommended starting point
+is 1x (720p) and logical-resolution output. Higher scales are experimental on
+Vulkan/MoltenVK and consume more GPU memory. Display VSync controls the three
+present-mode flags above; it leaves the game's `vsync` timing setting alone.
+Custom values outside the offered presets are displayed as custom and retained
+until that control is changed. Startup window size is deliberately not exposed:
+the current SDK also uses non-default window dimensions as a guest video mode.
+
+The Controls tab uses the same bundled SDL3 runtime and controller database as
+the game. Select a connected controller to see stick positions, analog trigger
+values and held buttons; Test Vibration is enabled when SDL reports support.
+Device detection refreshes automatically. This selection is for testing only;
+the game assigns controllers using its existing connection order. The preview
+releases its devices before Play and resumes when the game closes. Xbox and
+PlayStation button names are a launcher reference; the game's prompts stay Xbox.
+Keyboard input can be enabled alongside controllers. Select a row and Set Key
+to capture a shortcut, or edit comma-separated bindings directly. Escape cancels
+capture; Command shortcuts are reserved for macOS. Reset Keyboard restores the
+macOS template's bindings. Controller inputs themselves retain SDL's mappings.
+
+Save Settings and Play write only changed options to the existing settings file
+with an atomic replacement, retaining unrelated values, comments and tables.
+The file is re-read before saving to preserve other edits. Play runs the bundled
+game as a child process and returns to the launcher on exit, reloading settings
+changed through F4. Game Files offers ISO import and Finder shortcuts to the
+external data, DLC and log folders. The launcher does not change the desktop's
+display mode or delete saves or shader caches.
+
+For CLI testing, `Contents/MacOS/rr6-launcher --play` bypasses the settings
+window. `--data-root /absolute/folder` selects an isolated data directory;
+`--prepare-only image.iso` performs a headless import. Pass game options after
+`--`, for example `--play -- --user_language=1`. Explicit game flags override
+the launcher's default paths. The native settings tests can be run separately:
+
+    xcrun clang++ -std=c++17 -Wall -Wextra -Werror -fsanitize=address,undefined \
+      macos/settings.cpp macos/settings_test.cpp -o /tmp/rr6-launcher-settings-test
+    /tmp/rr6-launcher-settings-test
+
+The launcher creates `~/Library/Application Support/Ridge Racer 6/DLC/`
+and passes it as `rr6_dlc_folder`. Put your own content packages there;
+the game's existing installer validates and installs new or changed packages
+at startup. Content stays outside the signed app, and the packager refuses
+files with content-package headers. Development launches use `out/DLC/`.
+An explicit `--rr6_dlc_folder` launch option can select another folder.
+
+Set `user_language` in `rr6_recomp.toml` and restart: 1 English, 2 Japanese,
+3 German, 4 French, 5 Spanish, 6 Italian. The default is English; unsupported
+values fall back to English. Existing settings are preserved when upgrading.
+
+The package's `LSMinimumSystemVersion` comes from the maximum minimum OS
+version recorded in its bundled Mach-O files, including the launcher's
+compile target. The default build target is macOS 14.0. Declaring that target
+does not replace testing on macOS 14 hardware before a public release.
+Intel packages also need their own build and runtime verification.
+
+The generated package is a local test build, not a notarized public release.
+For public distribution, use Developer ID signing and Apple's
+[notarization workflow](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution).
+
+### Controllers on macOS
+
+SDL3 handles analog sticks, analog triggers, buttons, hotplug and rumble
+where the controller and macOS driver support it. Pair an Xbox or PS4
+DualShock 4 controller in macOS Bluetooth settings or connect it by USB.
+SDL maps it to the Xbox buttons the game expects; PlayStation Cross is A
+and Circle is B. Keyboard controls also work (Space confirms, Return
+starts/pauses, arrows steer and navigate).
+
+The build stages `gamecontrollerdb.txt`. The launch script passes its
+absolute path so mappings work regardless of the launching directory.
+For diagnostics, run `./run-macos.sh --rr6_log_input=true`; the log records
+SDL device detection and changes to player 1's guest input. Hardware
+verification should cover steering, both triggers, menu buttons,
+unplug/reconnect and vibration during a race. Check USB and Bluetooth
+separately before claiming a controller model has been verified.
+
+### Verification status
+
+The local feedback-review build uses the shared `rr6` SDK branch plus a local
+MoltenVK 1.4.3 update matching upstream development
+(`701747d61a0484e91c205e081a24ca592ffa12b4`). That dependency update is prepared
+separately for the shared SDK; the stock shared revision in the recipe above
+uses MoltenVK 1.4.2. The game build never modifies the dependency checkout.
+All five staged game/runtime binaries and the Cocoa launcher report a
+minimum OS of 14.0; the package declaration is derived from those binaries.
+The new app loads its bundled MoltenVK 1.4.3 and has been confirmed running
+on the current Apple M4 Max. English, German and Japanese `XGetLanguage`
+results have been checked. With isolated synthetic DLC, a nested valid
+package was installed, a package with a `..` entry was refused without
+writing outside the destination, and the unchanged package was skipped on
+the next launch. The packager refuses LIVE/PIRS/CON content-package headers.
+Runtime validation on an actual macOS 14 machine still remains.
+
+The ARM64 Release build has been tested on an Apple M4 Max. Native audio
+and Bluetooth DualShock 4 menu input have been observed. The packaged app
+has launched with its bundled Vulkan/MoltenVK runtime and shown stable Pac-Man
+graphics using `--async_shader_compilation=false`. Its native ISO importer has
+extracted the supported image and rejected malformed/wrong-version test images
+before writing data. Bundle signature verification passes after launch.
+With high-density presentation disabled, the initial window's swapchain was
+verified at 1280x720 with contents scale 1, versus 2560x1440 at scale 2.
+Fullscreen was also verified at 2560x1440 / scale 1, versus 5120x2880 /
+scale 2 in the earlier log. The optional display VSync settings selected
+FIFO presentation (mode 2). Frame-rate comparison still requires an
+interactive test.
+Intel builds, race rendering, analog steering/triggers, controller reconnect,
+rumble, Xbox hardware and older macOS versions still require verification.

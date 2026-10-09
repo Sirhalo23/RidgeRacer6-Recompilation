@@ -1,0 +1,40 @@
+# Native macOS defaults. F4 opens settings, F3 shows frame-rate statistics.
+input_backend = "sdl"
+use_fuzzy_alpha_epsilon = true
+# The required shared SDK fixes texture exponent bias; retain the game's LOD bias.
+rr6_zero_lod_bias = false
+resolution_scale = 1
+vsync = true
+
+# Disc languages: 1 English, 2 Japanese, 3 German, 4 French, 5 Spanish, 6 Italian.
+user_language = 1
+
+# Keep fullscreen presentation at logical resolution instead of a Retina
+# back buffer. This does not change the desktop mode or 720p guest rendering.
+window_high_pixel_density = false
+async_shader_compilation = true
+
+# vsync above controls guest timing. For optional strict display VSync,
+# uncomment all three settings below and restart (may increase latency).
+# vulkan_allow_present_mode_immediate = false
+# vulkan_allow_present_mode_mailbox = false
+# vulkan_allow_present_mode_fifo_relaxed = false
+
+# Keyboard input can coexist with controllers. Controllers retain analog
+# steering and triggers; SDL handles connection changes and supported rumble.
+mnk_mode = true
+mnk_mouse = false
+keybind_lstick_left = "Left,A"
+keybind_lstick_right = "Right,D"
+keybind_lstick_up = "Up,W"
+keybind_lstick_down = "Down,S"
+keybind_right_trigger = "Up,W"
+keybind_left_trigger = "Down,S"
+keybind_a = "Space"
+keybind_b = "Backspace,B"
+keybind_x = "X"
+keybind_y = "Y"
+keybind_right_shoulder = "E"
+keybind_left_shoulder = "Q"
+keybind_start = "Return,P"
+keybind_back = "Tab"

@@ -7,6 +7,13 @@
 #include <rex/rex_app.h>
 #include <rex/ui/overlay/achievement_notification.h>
 
+#ifdef __APPLE__
+#include <cstdlib>
+
+#include <rex/filesystem.h>
+#include <rex/input/flags.h>
+#endif
+
 #include "achievements.h"
 #include "dlc_install.h"
 #include "frame_stats.h"
@@ -22,6 +29,25 @@ class Rr6RecompApp : public rex::ReXApp {
     return std::unique_ptr<Rr6RecompApp>(new Rr6RecompApp(ctx, "rr6_recomp",
         PPCImageConfig));
   }
+
+#ifdef __APPLE__
+  void OnConfigurePaths(rex::PathConfig& paths) override {
+    // The release launcher keeps mutable settings outside the signed bundle.
+    if (const char* root = std::getenv("RR6_MACOS_RELEASE_USER_ROOT")) {
+      paths.config_path = std::filesystem::path(root) / "rr6_recomp.toml";
+    }
+  }
+
+  void OnPostInitLogging() override {
+    // Finder and Terminal may launch from a different working directory.
+    // Resolve the default SDL mapping database beside the executable, while
+    // preserving an explicit custom mapping path.
+    if (REXCVAR_GET(hid_mappings_file) == "gamecontrollerdb.txt") {
+      REXCVAR_SET(hid_mappings_file,
+                 (rex::filesystem::GetExecutableFolder() / "gamecontrollerdb.txt").string());
+    }
+  }
+#endif
 
   // Our overlays: the "Quit Ridge Racer 6?" question (Esc, or Back + Start
   // held) and the achievements list and pop-up, in place of the SDK's.

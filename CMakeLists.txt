@@ -36,8 +36,27 @@ else()
     add_executable(rr6_recomp ${RR6RECOMP_SOURCES})
 endif()
 
+if(APPLE)
+    set_target_properties(rr6_recomp PROPERTIES
+        MACOSX_BUNDLE TRUE
+        MACOSX_BUNDLE_BUNDLE_NAME "Ridge Racer 6"
+        MACOSX_BUNDLE_GUI_IDENTIFIER "org.rr6recomp.game"
+        MACOSX_BUNDLE_BUNDLE_VERSION "0.1"
+        MACOSX_BUNDLE_SHORT_VERSION_STRING "0.1"
+    )
+endif()
+
 # The Xenos GPU plugin is loaded at runtime (--gpu_plugin=xenos); stage it next to the exe.
 rexglue_setup_target(rr6_recomp GPU_PLUGINS xenos)
+
+# SDL resolves extra controller mappings at runtime. Keep the database beside
+# the game, including in native macOS builds.
+add_custom_command(TARGET rr6_recomp POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_CURRENT_SOURCE_DIR}/gamecontrollerdb.txt"
+        "$<TARGET_FILE_DIR:rr6_recomp>/gamecontrollerdb.txt"
+    VERBATIM
+)
 
 # The achievement sound: played with the Windows multimedia library there, and
 # kept next to the program (sounds/achievement.wav) everywhere.

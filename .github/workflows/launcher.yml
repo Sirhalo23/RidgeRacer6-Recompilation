@@ -8,6 +8,7 @@ on:
   push:
     paths:
       - 'launcher/**'
+      - 'macos/**'
       - 'linux/**'
       - 'src/**'
       - 'tools/check_windows_names.py'
@@ -16,6 +17,7 @@ on:
   pull_request:
     paths:
       - 'launcher/**'
+      - 'macos/**'
       - 'linux/**'
       - 'src/**'
       - 'tools/check_windows_names.py'
@@ -53,3 +55,7 @@ jobs:
         run: g++ -std=c++17 -O2 -Wall -Wextra -static -pthread launcher/rr6_extract.cpp launcher/disc_image.cpp -o rr6-extract
       - name: Check the shell scripts
         run: shellcheck -S style linux/*.sh build-linux.sh
+      - name: Test macOS launcher settings without game files
+        run: |
+          g++ -std=c++17 -Wall -Wextra -Werror -fsanitize=address,undefined macos/settings.cpp macos/settings_test.cpp -o /tmp/rr6-settings-test
+          /tmp/rr6-settings-test
