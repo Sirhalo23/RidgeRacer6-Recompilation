@@ -368,6 +368,52 @@ count frames. The F3 numbers are measured over half a second; the log gets
 30 seconds, so a bug report carries the player's real frame rate. On the
 Linux rig (software rendering) it reads 2 to 3 frames per second.
 
+## Music that loops (`src/xma_loop_fix.cpp`)
+
+The game streams its music (and some other sounds) as XMA in blocks through
+its own voice code (sub_822B02B8). For a block that repeats it calls
+`XMASetLoopData(context, &loop_data)` with a 12-byte `XMA_LOOP_DATA`
+(start and end as bit offsets, then count, subframe end, subframe skip).
+The SDK reads that pointer as a whole XMA context (SDK-NOTES section 11),
+so it took a loop count of 0 where the game asked for 255 ("for ever"), and
+the track stopped after its first pass (issue #17, the main menu music).
+`src/xma_loop_fix.cpp` defines `__imp__XMASetLoopData` in the game program
+and writes the right fields, each context word with one atomic update so
+the decoder's own changes made at the same moment are kept. The first four
+calls are logged with what the SDK would have read; on the Linux rig, the
+four calls on the way to a race all asked for 255 and the SDK would have
+read 0 for each. `rr6_xma_loop_fix = false` gives the old behaviour back.
+Not yet heard on Windows (the rig's audio output is silent).
+
+## Windows timer (`src/timer_resolution.cpp`)
+
+The SDK paces the guest with `Sleep(1)` polling: the vertical blank thread
+(`graphics_system.cpp`) wakes every millisecond and marks the 60 Hz ticks
+that have passed. On Windows 10 2004 and later a program that has not asked
+for a finer timer sleeps at least 15.6 ms however short a sleep it asks
+for, and the SDK does not ask (Xenia, which it comes from, does). The 60 Hz ticks
+then arrive in uneven steps. The game program now calls `timeBeginPeriod(1)`
+when it starts (`rr6_fine_timer`, default on) and logs how long a 1 ms
+sleep took before and after: `[timer] a 1 ms sleep took 15.6 ms; asked for a
+1 ms timer (granted), now 1.0 ms`. Whether this is what slows the game on
+some PCs (issue #7) is not known; the log line will tell from the next
+reports.
+
+## Sync to the display (issue #16)
+
+The Direct3D 12 presenter shows each frame at once, without waiting for the
+display (`Present(0, RESTART | ALLOW_TEARING)`), which tears. Forcing vsync
+in the graphics driver makes the game's 60 Hz timer and the display's
+refresh drift against each other, which shows as stutter (the two reports
+in #16 had identical settings files, so the vsync came from the driver). Our SDK fork (PR #2 there,
+`vsync_to_display`) presents with sync interval 1 and lets the guest's
+vertical blank follow the display's (`IDXGIOutput::WaitForVBlank`) when the
+display runs at a whole multiple of 60 Hz; other displays keep the timer.
+On Vulkan it only selects FIFO presentation. The launcher's Display page has
+"Sync to my screen", enabled only when `bin\rexruntime.dll` contains the
+setting's name (fork v0.10.0.101 and later). The log says whether the
+display or the timer drives the guest.
+
 ## Launcher settings and the F4 window
 
 The SDK's F4 window writes `rr6_recomp.toml` only when its **Save to config**
@@ -412,6 +458,17 @@ CAS/FSR sharpening (`present_effect` only accepts `bilinear`).
   own. Menus are not sprite groups and stay in the central 16:9 area, which
   is what fixed the uneven letter spacing of the previous revision.
 - `rr6_hud_stats = true` logs what the edge layout did every five seconds.
+
+- Rear-view mirror (`rr6_viewport_fix`, issue #12): the mirror is a second
+  3D view set with D3DDevice_SetViewport (sub_82257488) inside a 2D frame.
+  The frame was narrowed with the rest of the 2D layer, the viewport was not,
+  so the mirror's picture was wider than its frame by the stretch factor.
+  Every viewport covering only part of the 1280x720 frame is now narrowed
+  around the centre by the same factor (a narrowed copy of the caller's
+  D3DVIEWPORT9 goes on the guest stack). Full-width viewports (the race,
+  split screen) and other surfaces are left alone. `rr6_viewport_log = true`
+  logs each new viewport. Not yet seen in a race: the rig is too slow to
+  drive to cockpit view (1 frame per second at 21:9).
 
 Known cosmetic limits in ultrawide: full-screen pictures are stretched (the
 intro/attract videos and the Pac-Man loading screen); menu tickers, the

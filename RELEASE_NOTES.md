@@ -11,6 +11,26 @@ file: 28 of 71 scanners for the SDK's own build of it in v0.1.0 and v0.1.2,
 repository are not flagged. Details and how to check the file:
 [If your antivirus flags rexruntime.dll](README.md#if-your-antivirus-flags-rexruntimedll).
 
+## Not released yet
+
+- Music loops again: tracks that repeat, such as the main menu's, stopped
+  after their first pass (issue #17). The game tells the console's audio
+  decoder where a loop starts and ends, and the SDK read that information
+  from the wrong place, so it saw "play once" where the game said "repeat".
+  The game program now passes it on correctly.
+- Ultrawide: the rear-view mirror's picture fits its frame (issue #12). The
+  mirror is a small 3D view inside the picture; it is now narrowed like the
+  HUD around it.
+- Windows: the game asks Windows for a 1 ms timer when it starts. Without
+  it, the short waits that pace the game last 15.6 ms on current Windows, so
+  the 60 Hz tick arrived in uneven steps. The log notes how long a short
+  wait took before and after (issue #7).
+- Launcher 1.5: "Sync to my screen" on the Display page, for a picture
+  without tearing (issue #16). It needs the runtime from our SDK fork's
+  v0.10.0.101, which also lets the game's 60 Hz clock follow a 60 or 120 Hz
+  screen so frames are not repeated or dropped; with an older runtime the
+  box is greyed out.
+
 ## v0.1.5 and Linux test build 06 (2026-10-09)
 
 Inside the Windows zip it calls itself "test build 09". The Linux release has

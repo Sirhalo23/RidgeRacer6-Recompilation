@@ -12,6 +12,7 @@
 #include "frame_stats.h"
 #include "overlay_input.h"
 #include "quit_prompt.h"
+#include "timer_resolution.h"
 
 class Rr6RecompApp : public rex::ReXApp {
  public:
@@ -57,6 +58,7 @@ class Rr6RecompApp : public rex::ReXApp {
       });
       return;
     }
+    rr6::UseFineTimer();  // short waits really short on Windows (issue #7)
     rr6::AddContentFromDlcFolder(runtime());
     rr6::WriteInstalledContentList(runtime());
     SetGuestFrameStats(rr6::FrameStatsProvider());  // the F3 window's frame rate
