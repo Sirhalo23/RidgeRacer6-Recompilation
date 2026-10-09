@@ -82,6 +82,7 @@ class Rr6RecompApp : public rex::ReXApp {
       });
       return;
     }
+    rr6::AddContentFromDlcFolder(runtime());
     rr6::WriteInstalledContentList(runtime());
     rex::ReXApp::LaunchModule();
   }

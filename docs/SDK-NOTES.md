@@ -181,7 +181,19 @@ place. The same fixes belong in the SDK (a candidate for the fork).
   The launcher used to take the setting from the file and could look in a
   different place than the game; it no longer does.
 
-## 10. Smaller observations
+## 10. `XGetLanguage` always answers English
+
+`XGetLanguage` (`src/kernel/xam/xam_info.cpp`) returns English for every
+title: it takes the region from a hard-coded NTSC-U value (a TODO says it
+should come from the executable) and ignores the `user_language` setting,
+which only `ExGetXConfigSetting` reads. RR6 asks `XGetLanguage`, so it was
+always in English although the disc has six languages. `src/language.cpp`
+answers the call from `user_language` instead; the game's own definition of
+`__imp__XGetLanguage` takes the place of the runtime's. Checked on the Linux
+rig: with 3 the loading screen is in German, with 2 in Japanese. Answering
+from `user_language` in the SDK itself would be the general fix.
+
+## 11. Smaller observations
 
 - `present_effect` only accepts `bilinear` in the prebuilt Windows runtime
   (FidelityFX is not compiled in), although the help text lists cas/fsr.

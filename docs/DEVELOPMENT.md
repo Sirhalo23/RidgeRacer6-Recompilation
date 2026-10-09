@@ -298,6 +298,16 @@ the inside of a package (see "Outside review" below and SDK-NOTES section 8).
   launcher is now version 1.3.
 - Linux: `ridge-racer-6.sh --install-dlc PATH` does the same and prints the
   result.
+- The DLC folder (asked for in issue #2): the packages ship an empty `DLC`
+  folder next to `bin`. `AddContentFromDlcFolder`, called from `LaunchModule`
+  at every normal start, searches it (and `<game files>/DLC`, or the folder
+  named by `rr6_dlc_folder`; `none` switches it off) and installs files that
+  are new or changed, with the same checks. What was added from there is
+  kept in `<user data>/dlc-folder-added.txt` (name, size, time), so an
+  unchanged folder costs a directory listing; content whose installed folder
+  was deleted is added again. Refused files are only logged. Both packaging
+  scripts now refuse any file that starts like a content package (`LIVE`,
+  `PIRS`, `CON `), so one left in `package/DLC` cannot ship.
 
 Tested with `tools/make_test_content.py`, which writes a stand-in package
 (`--break KIND` writes one of nine doctored or damaged ones; all nine are
@@ -326,6 +336,26 @@ all work with real content on Direct3D 12 / Windows. Not tried: the
 downloadable car designs (36, free, per the fan wiki), real content on Linux,
 and the subfolder search on Windows. The game creates the content list at the main menu, after the
 save has loaded; with the stand-ins it opened nothing afterwards.
+
+## Language (`src/language.cpp`)
+
+The disc has English, Japanese, German, French, Spanish and Italian. The game
+asks `XGetLanguage`, which in the SDK always answers English (SDK-NOTES
+section 10). `src/language.cpp` defines `__imp__XGetLanguage` in the game
+program, which the game's code then calls instead of the runtime's, and
+answers from the SDK's `user_language` setting (1 English, 2 Japanese,
+3 German, 4 French, 5 Spanish, 6 Italian; anything else gives English). The
+launcher's Display tab has a Language choice that writes `user_language`;
+the Linux script has `--language NAME`, which writes the same line and keeps
+it when the settings are written afresh.
+
+Checked on the Linux rig (2026-10-08): the loading screen's line reads
+"Drücke die START-Taste, um Ridge- Racer zu starten." with 3 and is in
+Japanese with 2; the log shows the game asking once at start. Not checked:
+French, Spanish, Italian, menus and races in each, and the Windows build
+(the definition replacing the runtime's relies on the linker taking a symbol
+from an object file before the runtime's import library). Asked for in
+issue #2.
 
 ## Display settings
 

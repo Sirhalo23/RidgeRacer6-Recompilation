@@ -407,7 +407,7 @@ bool IsReservedKey(const std::string& name) {
 
 enum : int {
   IDC_TAB0 = 100, IDC_TAB1, IDC_TAB2, IDC_TAB3, IDC_TAB4,  // the page buttons in the banner, in page order
-  IDC_SCREEN, IDC_SHAPE, IDC_HUD, IDC_SCALE, IDC_SMOOTH, IDC_ANISO, IDC_FOLIAGE,
+  IDC_SCREEN, IDC_SHAPE, IDC_HUD, IDC_SCALE, IDC_SMOOTH, IDC_ANISO, IDC_LANGUAGE, IDC_FOLIAGE,
   IDC_KEYBOARD, IDC_NAMES, IDC_BINDLIST, IDC_SETKEY, IDC_ADDKEY, IDC_CLEARKEY, IDC_RESETKEYS,
   IDC_PLAY, IDC_SAVE, IDC_DEFAULTS, IDC_LOGS, IDC_SAVES, IDC_DIAG, IDC_STATUS,
   IDC_STOP_COPY, IDC_COPY_AGAIN, IDC_ACH_LIST, IDC_ACH_SOUND,
@@ -604,6 +604,7 @@ void LoadIntoControls() {
   ComboSet(IDC_SMOOTH, smooth == "fxaa" ? 1 : smooth == "fxaa_extreme" ? 2 : 0);
   int aniso = s.GetInt("anisotropic_override", 5);
   ComboSet(IDC_ANISO, aniso <= 3 ? 0 : aniso == 4 ? 1 : 2);
+  ComboSet(IDC_LANGUAGE, std::min(6, std::max(1, s.GetInt("user_language", 1))) - 1);
   CheckSet(IDC_FOLIAGE, s.GetBool("use_fuzzy_alpha_epsilon", true));
   CheckSet(IDC_KEYBOARD, s.GetBool("mnk_mode", true));
   CheckSet(IDC_DIAG, p.GetBool("diagnostic", false));
@@ -662,6 +663,7 @@ void StoreFromControls() {
   const char* smooth[] = {"none", "fxaa", "fxaa_extreme"};
   s.SetString("swap_post_effect", smooth[std::min(2, std::max(0, ComboGet(IDC_SMOOTH)))]);
   s.SetInt("anisotropic_override", 3 + std::min(2, std::max(0, ComboGet(IDC_ANISO))));
+  s.SetInt("user_language", 1 + std::min(5, std::max(0, ComboGet(IDC_LANGUAGE))));
   s.SetBool("use_fuzzy_alpha_epsilon", CheckGet(IDC_FOLIAGE));
 
   // Keyboard: the game treats it as one more controller. The mouse is left
@@ -2221,7 +2223,9 @@ void PlayAchievementSound() {
 // starting the game. It also keeps dlc-installed.txt, the names of what is
 // installed. Nothing of this is game data of ours: the files are the player's.
 
-const wchar_t* const kDlcHint = L"To remove content, delete its folder (\"Open content folder\").";
+const wchar_t* const kDlcHint =
+    L"To remove content, delete its folder (\"Open content folder\"), and take its file out of the "
+    L"DLC folder if it is there.";
 
 std::wstring ContentFolder() {
   std::wstring root = UserDataRoot();
@@ -2491,10 +2495,17 @@ void BuildUi() {
   y += 34;
   Add(pg, L"STATIC", L"Texture detail", 0, lx, y + 4, 210, 20, -1);
   AddCombo(pg, cx, y, cw, IDC_ANISO, {L"Standard (4x)", L"High (8x)", L"Highest (16x)"});
-  y += 40;
+  y += 34;
+  // The disc's six languages, in the console's numbering (user_language 1-6;
+  // src/language.cpp in the game answers the game's question with it).
+  Add(pg, L"STATIC", L"Language", 0, lx, y + 4, 210, 20, -1);
+  AddCombo(pg, cx, y, cw, IDC_LANGUAGE,
+           {L"English", L"\u65E5\u672C\u8A9E (Japanese)", L"Deutsch (German)",
+            L"Fran\u00E7ais (French)", L"Espa\u00F1ol (Spanish)", L"Italiano (Italian)"});
+  y += 36;
   Add(pg, L"BUTTON", L"Fix flickering trees and foliage (recommended, needed on NVIDIA cards)",
       BS_AUTOCHECKBOX | WS_TABSTOP, lx, y, full, 22, IDC_FOLIAGE);
-  y += 36;
+  y += 32;
   AddNote(pg,
           L"The game always runs at 60 frames per second, as it did on Xbox 360.\n"
           L"If the game runs slowly, choose a lower Sharpness.\n"
@@ -2559,12 +2570,14 @@ void BuildUi() {
           L"If you own downloadable content for Ridge Racer 6, you can add it to the game here. Use the "
           L"content files from your own Xbox 360's storage. They are in the folder "
           L"Content\\0000000000000000\\4E4D07D3\\00000002 and have long names without an extension. "
-          L"The files are only read, and nothing is downloaded.",
-          lx, y, full, 52);
-  y += 58;
-  Add(pg, L"LISTBOX", L"", LBS_NOINTEGRALHEIGHT | LBS_NOSEL | WS_VSCROLL | WS_TABSTOP, lx, y, full, 150,
+          L"The files are only read, and nothing is downloaded.\n"
+          L"You can also put them in the DLC folder next to this launcher: the game adds new ones "
+          L"each time it starts.",
+          lx, y, full, 68);
+  y += 74;
+  Add(pg, L"LISTBOX", L"", LBS_NOINTEGRALHEIGHT | LBS_NOSEL | WS_VSCROLL | WS_TABSTOP, lx, y, full, 134,
       IDC_DLC_LIST, WS_EX_CLIENTEDGE);
-  y += 158;
+  y += 142;
   AddButton(pg, L"Add content files...", lx, y, 170, 28, IDC_DLC_ADD);
   AddButton(pg, L"Add a folder...", lx + 178, y, 130, 28, IDC_DLC_FOLDER);
   AddButton(pg, L"Open content folder", lx + full - 170, y, 170, 28, IDC_DLC_OPEN);

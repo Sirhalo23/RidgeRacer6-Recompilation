@@ -40,7 +40,8 @@ $needed = @(
     (Join-Path $packageSrc 'Play without the launcher (diagnostic).bat'),
     (Join-Path (Join-Path $packageSrc 'tools') 'prepare-game.ps1'),
     (Join-Path (Join-Path $packageSrc 'tools') 'collect-report.ps1'),
-    (Join-Path (Join-Path $packageSrc 'PUT-ISO-HERE') 'ONLY NEEDED FOR Play without the launcher.bat.txt')
+    (Join-Path (Join-Path $packageSrc 'PUT-ISO-HERE') 'ONLY NEEDED FOR Play without the launcher.bat.txt'),
+    (Join-Path (Join-Path $packageSrc 'DLC') 'PUT-CONTENT-FILES-HERE.txt')
 )
 foreach ($f in $needed) {
     if (-not (Test-Path -LiteralPath $f)) { Fail ("Missing: $f`nBuild the game first (build-windows.bat).") }
@@ -65,7 +66,7 @@ if (Test-Path -LiteralPath $zip) { Fail "$zip already exists. Use -Number to pic
 if (Test-Path -LiteralPath $stage) { Remove-Item -LiteralPath $stage -Recurse -Force }
 
 Write-Host "Assembling $name ..."
-foreach ($d in @('', 'bin', (Join-Path 'bin' 'sounds'), 'tools', 'licenses', 'PUT-ISO-HERE')) {
+foreach ($d in @('', 'bin', (Join-Path 'bin' 'sounds'), 'tools', 'licenses', 'PUT-ISO-HERE', 'DLC')) {
     [void](New-Item -ItemType Directory -Force -Path (Join-Path $stage $d))
 }
 
@@ -85,6 +86,9 @@ Copy-Text (Join-Path $packageSrc 'Play without the launcher.bat') (Join-Path $st
 Copy-Text (Join-Path $packageSrc 'Play without the launcher (diagnostic).bat') (Join-Path $stage 'Play without the launcher (diagnostic).bat')
 Copy-Text (Join-Path (Join-Path $packageSrc 'PUT-ISO-HERE') 'ONLY NEEDED FOR Play without the launcher.bat.txt') `
           (Join-Path (Join-Path $stage 'PUT-ISO-HERE') 'ONLY NEEDED FOR Play without the launcher.bat.txt')
+# Empty but for its note: players put their own content files there.
+Copy-Text (Join-Path (Join-Path $packageSrc 'DLC') 'PUT-CONTENT-FILES-HERE.txt') `
+          (Join-Path (Join-Path $stage 'DLC') 'PUT-CONTENT-FILES-HERE.txt')
 Copy-Item -LiteralPath (Join-Path (Join-Path $packageSrc 'tools') 'prepare-game.ps1') -Destination (Join-Path $stage 'tools')
 Copy-Item -LiteralPath (Join-Path (Join-Path $packageSrc 'tools') 'collect-report.ps1') -Destination (Join-Path $stage 'tools')
 foreach ($lic in @(Get-ChildItem -LiteralPath (Join-Path $packageSrc 'licenses') -File)) {
@@ -134,6 +138,16 @@ foreach ($f in $files) {
     $total += $f.Length
     if ($f.Extension -match '^\.(xex|dat|sfd|iso|bin|xbe|pak)$') { Fail "Game data must not be packaged: $($f.FullName)" }
     if ($f.Length -gt 60MB) { Fail "Unexpectedly large file (game data?): $($f.FullName)" }
+    # Content packages have no extension; they start with LIVE, PIRS or "CON ".
+    if ($f.Length -ge 4) {
+        $head = New-Object byte[] 4
+        $in = [System.IO.File]::OpenRead($f.FullName)
+        try { [void]$in.Read($head, 0, 4) } finally { $in.Close() }
+        $magic = [System.Text.Encoding]::ASCII.GetString($head)
+        if ($magic -eq 'LIVE' -or $magic -eq 'PIRS' -or $magic -eq 'CON ') {
+            Fail "A content package must not be packaged: $($f.FullName)"
+        }
+    }
 }
 if ($total -gt 150MB) { Fail "The package is unexpectedly large ($([math]::Round($total / 1MB)) MB)." }
 
