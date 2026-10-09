@@ -19,6 +19,7 @@ sdk=${REXSDK_DIR:-"$PWD/../rexglue-sdk"}
 cmake=${CMAKE:-cmake}
 python=${PYTHON:-python3}
 jobs=${RR6_BUILD_JOBS:-8}
+deployment_target=${RR6_MACOS_DEPLOYMENT_TARGET:-14.0}
 
 if [[ ! -f ../game/default.xex ]]; then
   if [[ $# != 1 ]]; then
@@ -41,10 +42,12 @@ fi
 
 # Run separately: sources.cmake does not exist at the first configure.
 "$cmake" --preset "$preset" -DREXSDK_DIR="$sdk" \
+  -DCMAKE_OSX_DEPLOYMENT_TARGET="$deployment_target" \
   -DCPM_SOURCE_CACHE="$PWD/out/dependencies" \
   -DREXGLUE_ENABLE_TRACY=OFF -DREXGLUE_USE_VULKAN=ON
 "$cmake" --build --preset "$preset" --target rr6_recomp_codegen --parallel "$jobs"
-"$cmake" --preset "$preset" -DREXSDK_DIR="$sdk"
+"$cmake" --preset "$preset" -DREXSDK_DIR="$sdk" \
+  -DCMAKE_OSX_DEPLOYMENT_TARGET="$deployment_target"
 "$cmake" --build --preset "$preset" --target rr6_recomp --parallel "$jobs"
 
 build="out/build/$preset/rr6_recomp.app/Contents/MacOS"

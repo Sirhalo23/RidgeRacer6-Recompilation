@@ -126,21 +126,22 @@ Mac you will run on.
 Install Xcode 16 or newer with its command-line tools, CMake 3.25 or newer,
 Ninja and Python 3. With Homebrew: `brew install cmake ninja python`.
 
-Use a ReXGlue SDK source checkout containing the source-build and
-presentation fixes proposed in
-[ReXGlue SDK PR #487](https://github.com/rexglue/rexglue-sdk/pull/487).
-The stock v0.10.0 revision does not contain those fixes. This project uses
-the SDK through `REXSDK_DIR`; it does not modify or patch the SDK.
+Use the project's shared
+[ReXGlue SDK fork](https://github.com/Sirhalo23/rexglue-sdk), branch `rr6`,
+as Windows and Linux do. It includes the macOS source-build, presentation
+and density-control changes from
+[SDK PR #487](https://github.com/rexglue/rexglue-sdk/pull/487), plus the Vulkan
+texture-exponent fix needed for correct track textures. PR #487 was closed
+because upstream development already addresses its core build/presentation
+issues; the shared fork also retains the optional density control.
+This project uses the SDK through `REXSDK_DIR`; it does not patch the SDK.
+Place a source checkout next to this repository:
 
-Until an upstream revision includes the fixes, the following fork revision
-provides the tested SDK dependency. Place it next to this repository:
-
-    git clone https://github.com/abradburne/rexglue-sdk.git ../rexglue-sdk
-    git -C ../rexglue-sdk checkout e7f1624e721e19134d6201a45314cb3c8573768c
+    git clone --branch rr6 https://github.com/Sirhalo23/rexglue-sdk.git ../rexglue-sdk
+    git -C ../rexglue-sdk checkout e4a7f75499071fa773d16a099b3ec2b4f941f786
     git -C ../rexglue-sdk submodule update --init --recursive
 
-Replace that temporary dependency with an upstream SDK revision containing
-the fixes when one is available. The SDK revision includes the upstream
+The shared SDK revision includes the upstream
 [MoltenVK drawable-size fix](https://github.com/KhronosGroup/MoltenVK/commit/4d74f17e0bc44de5db4b6778313c90258dcce634)
 for swapchain recreation leaving the drawable at 1x1 pixels.
 
@@ -155,6 +156,10 @@ generates the guest C++, reconfigures CMake to include those sources, and
 builds the game. `REXSDK_DIR` selects another SDK source location;
 `RR6_BUILD_JOBS` controls parallel compilation (default 8). `CMAKE` and
 `PYTHON` can select tools installed outside `PATH`.
+The macOS presets target macOS 14.0 for both the game and source-built SDK
+dependencies. `RR6_MACOS_DEPLOYMENT_TARGET` can override that value when using
+the build script; both configure passes apply it. Do not lower the target
+without checking the resulting binaries and testing on that OS.
 
 The app bundle is `out/build/mac-arm64-release/rr6_recomp.app` (or
 `mac-amd64-release` on Intel). Use the launch script to provide the game-data
@@ -163,8 +168,10 @@ First build copies macOS defaults to
 `rr6_recomp.toml` beside the executable; later builds preserve your settings.
 The launch script stores saves and caches in `out/userdata`, and writes
 `logs/run-macos.log`. F4 opens settings and F3 opens statistics. Initial
-rendering scale is native 720p. The stock SDK uses the same texture LOD bias
-workaround as Linux (see above).
+rendering scale is native 720p. The shared SDK's texture-exponent fix lets the
+game retain its original texture LOD bias, as on Windows. The macOS default
+disables the zero-LOD-bias workaround, including source builds whose version
+suffix is a commit count rather than the fork's package number.
 
 The macOS defaults set `window_high_pixel_density = false`, using a logical
 resolution presentation buffer rather than a Retina/HiDPI buffer. This
@@ -217,12 +224,22 @@ Run `./macos/make-package.sh` again and replace the app from the new ZIP.
 The release launcher uses the existing native `launcher/disc_image.cpp`
 extractor, so there is no runtime Python or SDK installation requirement.
 
+The launcher creates `~/Library/Application Support/Ridge Racer 6/DLC/`
+and passes it as `rr6_dlc_folder`. Put your own content packages there;
+the game's existing installer validates and installs new or changed packages
+at startup. Content stays outside the signed app, and the packager refuses
+files with content-package headers. Development launches use `out/DLC/`.
+An explicit `--rr6_dlc_folder` launch option can select another folder.
+
+Set `user_language` in `rr6_recomp.toml` and restart: 1 English, 2 Japanese,
+3 German, 4 French, 5 Spanish, 6 Italian. The default is English; unsupported
+values fall back to English. Existing settings are preserved when upgrading.
+
 The package's `LSMinimumSystemVersion` comes from the maximum minimum OS
-version recorded in its bundled Mach-O files. The current local build targets
-macOS 27.0; this is not a claim of compatibility with older macOS versions.
-Build the SDK and game with an explicit deployment target and test that OS
-before publishing an older-OS release. Intel packages also need their own
-build and runtime verification.
+version recorded in its bundled Mach-O files, including the launcher's
+compile target. The default build target is macOS 14.0. Declaring that target
+does not replace testing on macOS 14 hardware before a public release.
+Intel packages also need their own build and runtime verification.
 
 The generated package is a local test build, not a notarized public release.
 For public distribution, use Developer ID signing and Apple's
@@ -246,6 +263,21 @@ unplug/reconnect and vibration during a race. Check USB and Bluetooth
 separately before claiming a controller model has been verified.
 
 ### Verification status
+
+The local feedback-review build uses the shared `rr6` SDK branch plus a local
+MoltenVK 1.4.3 update matching upstream development
+(`701747d61a0484e91c205e081a24ca592ffa12b4`). That dependency update is prepared
+separately for the shared SDK; the stock shared revision in the recipe above
+uses MoltenVK 1.4.2. The game build never modifies the dependency checkout.
+All five staged game/runtime binaries and the Cocoa launcher report a
+minimum OS of 14.0; the package declaration is derived from those binaries.
+The new app loads its bundled MoltenVK 1.4.3 and has been confirmed running
+on the current Apple M4 Max. English, German and Japanese `XGetLanguage`
+results have been checked. With isolated synthetic DLC, a nested valid
+package was installed, a package with a `..` entry was refused without
+writing outside the destination, and the unchanged package was skipped on
+the next launch. The packager refuses LIVE/PIRS/CON content-package headers.
+Runtime validation on an actual macOS 14 machine still remains.
 
 The ARM64 Release build has been tested on an Apple M4 Max. Native audio
 and Bluetooth DualShock 4 menu input have been observed. The packaged app

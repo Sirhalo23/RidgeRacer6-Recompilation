@@ -1,8 +1,13 @@
 # Native macOS defaults. F4 opens settings, F3 shows frame-rate statistics.
 input_backend = "sdl"
 use_fuzzy_alpha_epsilon = true
+# The required shared SDK fixes texture exponent bias; retain the game's LOD bias.
+rr6_zero_lod_bias = false
 resolution_scale = 1
 vsync = true
+
+# Disc languages: 1 English, 2 Japanese, 3 German, 4 French, 5 Spanish, 6 Italian.
+user_language = 1
 
 # Keep fullscreen presentation at logical resolution instead of a Retina
 # back buffer. This does not change the desktop mode or 720p guest rendering.

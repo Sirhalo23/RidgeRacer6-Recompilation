@@ -11,8 +11,24 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def version_key(value):
+    parts = tuple(map(int, value.split(".")))
+    return parts + (0,) * (3 - len(parts))
+
+
 def run(*args):
     return subprocess.check_output([str(arg) for arg in args], text=True)
+
+
+def reject_game_data(app):
+    for path in app.rglob("*"):
+        if not path.is_file():
+            continue
+        if path.suffix.lower() in {".iso", ".xex", ".sfd", ".dat", ".bin", ".xpso"}:
+            raise RuntimeError(f"Refusing to package game data: {path}")
+        with path.open("rb") as stream:
+            if stream.read(4) in {b"LIVE", b"PIRS", b"CON "}:
+                raise RuntimeError(f"Refusing to package a content package: {path}")
 
 
 def package(build, sdk, arch, output):
@@ -50,7 +66,15 @@ def package(build, sdk, arch, output):
             versions += re.findall(r"\bminos\s+([\d.]+)", info)
         if not versions:
             raise RuntimeError("Could not determine the build's minimum macOS version")
-        minimum = max(versions, key=lambda value: tuple(map(int, value.split("."))))
+        minimum = max(versions, key=version_key)
+        cache = build.parent / "CMakeCache.txt"
+        if cache.is_file():
+            target = re.search(r"^CMAKE_OSX_DEPLOYMENT_TARGET:[^=]+=([\d.]+)$",
+                               cache.read_text(), re.MULTILINE)
+            if target and version_key(minimum) > version_key(target[1]):
+                raise RuntimeError(
+                    f"A bundled binary requires macOS {minimum}, above the configured "
+                    f"deployment target {target[1]}; rebuild all dependencies")
         launcher = binary / "rr6-launcher"
         run("xcrun", "clang++", "-std=c++17", "-O2", "-Wall", "-Wextra", "-Werror",
             "-fobjc-arc", "-arch", arch, f"-mmacosx-version-min={minimum}", "-framework", "Cocoa",
@@ -104,6 +128,10 @@ def package(build, sdk, arch, output):
             "Later launches reuse the extracted copy; the ISO is no longer needed.\n"
             "Game files, settings, saves and logs are kept in\n"
             "~/Library/Application Support/Ridge Racer 6/.\n\n"
+            "Put your own DLC content packages in that folder's DLC subfolder.\n"
+            "New or changed packages are checked and installed at game startup.\n"
+            "Set user_language in rr6_recomp.toml, then restart:\n"
+            "1 English, 2 Japanese, 3 German, 4 French, 5 Spanish, 6 Italian.\n\n"
             "Pair a controller over Bluetooth or connect USB. F4 opens settings.\n"
             "Defaults use 720p guest rendering and a logical-resolution presentation buffer.\n"
             "For sharper Retina output, set window_high_pixel_density = true in\n"
@@ -114,10 +142,12 @@ def package(build, sdk, arch, output):
         (resources / "BUILD.txt").write_text(
             f"RR6 commit: {run('git', '-C', ROOT, 'rev-parse', 'HEAD').strip()}\n"
             f"SDK commit: {run('git', '-C', sdk, 'rev-parse', 'HEAD').strip()}\n"
+            f"MoltenVK commit: {run('git', '-C', sdk / 'thirdparty/moltenvk', 'rev-parse', 'HEAD').strip()}\n"
             "Local working-tree changes may be included.\n", encoding="utf-8")
         for path in app.rglob("*"):
             if path.is_file():
                 path.chmod(0o755 if path in code else 0o644)
+        reject_game_data(app)
         for path in code:
             run("codesign", "--force", "--sign", "-", path)
         run("codesign", "--force", "--sign", "-", app)

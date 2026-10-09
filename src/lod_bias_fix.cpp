@@ -43,7 +43,10 @@
 
 // The fork numbers its builds 0.10.0.100, 0.10.0.101, ...; upstream's v0.10.0
 // has a fourth number of 0.
-#if defined(_WIN32)
+// The macOS build requires the shared rr6 SDK fork with the exponent fix.
+// Source builds after its release tag may have a commit-count version below
+// 100, so the package-version test alone cannot identify that capability.
+#if defined(_WIN32) || defined(__APPLE__)
 #define RR6_ZERO_LOD_BIAS_DEFAULT false
 #elif REXGLUE_VERSION_MAJOR == 0 && REXGLUE_VERSION_MINOR == 10 && \
     REXGLUE_VERSION_PATCH == 0 && REXGLUE_VERSION_TWEAK >= 100

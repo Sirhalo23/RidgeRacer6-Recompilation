@@ -12,7 +12,14 @@ if [[ ! -x "$build/rr6_recomp" ]]; then
   echo "Build first: ./build-macos.sh" >&2
   exit 1
 fi
-mkdir -p logs out/userdata
+mkdir -p logs out/userdata out/DLC
+has_dlc_arg=false
+for arg in "$@"; do
+  case "$arg" in --rr6_dlc_folder|--rr6_dlc_folder=*) has_dlc_arg=true ;; esac
+done
+if [[ $has_dlc_arg == false ]]; then
+  set -- "--rr6_dlc_folder=$PWD/out/DLC" "$@"
+fi
 exec "$build/rr6_recomp" \
   --game_data_root "$PWD/../game" \
   --user_data_root "$PWD/out/userdata" \

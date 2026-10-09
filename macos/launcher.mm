@@ -164,6 +164,8 @@ int main(int argc, char** argv) {
     std::error_code ec;
     fs::create_directories(data / "logs", ec);
     if (ec) { Error(@"The user-data folder could not be created.", false); return 1; }
+    fs::create_directories(data / "DLC", ec);
+    if (ec) { Error(@"The DLC folder could not be created.", false); return 1; }
     fs::path bin = fs::path(bundle.bundleURL.fileSystemRepresentation) / "Contents/MacOS";
     const fs::path resources = bin.parent_path() / "Resources";
     const fs::path config = data / "rr6_recomp.toml";
@@ -176,6 +178,7 @@ int main(int argc, char** argv) {
     std::vector<std::string> args = {(bin / "rr6_recomp").string(),
         "--game_data_root=" + game.string(), "--user_data_root=" + (data / "userdata").string(),
         "--gpu_plugin=xenos", "--hid_mappings_file=" + (resources / "gamecontrollerdb.txt").string(),
+        "--rr6_dlc_folder=" + (data / "DLC").string(),
         "--log_file=" + (data / "logs/run.log").string()};
     // CLI11 rejects duplicate options. Explicit launch flags replace the
     // launcher's defaults, while unrelated game flags are simply forwarded.
