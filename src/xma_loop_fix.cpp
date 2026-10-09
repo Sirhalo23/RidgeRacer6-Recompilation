@@ -23,9 +23,10 @@
 // decoder's own changes to the same words (buffer valid flags, read offsets)
 // made at the same moment are not undone.
 
+#include <array>
 #include <atomic>
+#include <bit>
 #include <cstdint>
-#include <cstring>
 
 #include <rex/audio/xma/context.h>
 #include <rex/cvar.h>
@@ -46,7 +47,7 @@ constexpr int kContextWords = sizeof(XMA_CONTEXT_DATA) / 4;
 
 // Which bits of each context word hold the loop settings.
 struct LoopMask {
-  uint32_t words[kContextWords] = {};
+  std::array<uint32_t, kContextWords> words = {};
   LoopMask() {
     uint8_t zero[sizeof(XMA_CONTEXT_DATA)] = {};
     XMA_CONTEXT_DATA ones(zero);
@@ -55,7 +56,7 @@ struct LoopMask {
     ones.loop_subframe_skip = 0x7;
     ones.loop_start = 0x3FFFFFF;
     ones.loop_end = 0x3FFFFFF;
-    std::memcpy(words, &ones, sizeof(words));
+    words = std::bit_cast<std::array<uint32_t, kContextWords>>(ones);
   }
 };
 
@@ -102,8 +103,7 @@ extern "C" REX_FUNC(__imp__XMASetLoopData) {
   wanted.loop_count = loop_count;
   wanted.loop_subframe_end = loop_subframe_end;
   wanted.loop_subframe_skip = loop_subframe_skip;
-  uint32_t wanted_words[kContextWords];
-  std::memcpy(wanted_words, &wanted, sizeof(wanted_words));
+  const auto wanted_words = std::bit_cast<std::array<uint32_t, kContextWords>>(wanted);
 
   static const LoopMask mask;
   for (int i = 0; i < kContextWords; ++i) {
