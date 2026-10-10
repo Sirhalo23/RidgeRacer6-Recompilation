@@ -36,7 +36,10 @@ CXX_KEYWORDS = {
     'static_cast', 'struct', 'switch', 'template', 'this', 'thread_local', 'throw', 'true', 'try',
     'typedef', 'typeid', 'typename', 'union', 'unsigned', 'using', 'virtual', 'void', 'volatile',
     'while', 'xor'}
-SKIP_HEADERS = ('pthread', 'sched.h', 'semaphore.h', 'unistd.h', 'io.h', 'stdio.h', 'stdlib.h', 'string.h',
+# Headers nothing includes unless asked to, which redefine ordinary Windows API
+# names (mapinls.h maps WideCharToMultiByte and friends for old MAPI code).
+RARE_HEADERS = ('mapinls.h',)
+SKIP_HEADERS = RARE_HEADERS + ('pthread', 'sched.h', 'semaphore.h', 'unistd.h', 'io.h', 'stdio.h', 'stdlib.h', 'string.h',
                 'time.h', 'wchar.h', 'math.h', 'process.h', 'direct.h', 'sys', 'float.h', 'errno.h', 'signal.h',
                 'ctype.h', 'malloc.h', 'tgmath.h', 'complex.h', 'inttypes.h', 'conio.h', 'assert.h', 'locale.h',
                 'memory.h', 'search.h', 'stddef.h', 'stdint.h', 'tchar.h', 'fcntl.h', 'dirent.h', 'utime.h')

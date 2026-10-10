@@ -399,6 +399,37 @@ sleep took before and after: `[timer] a 1 ms sleep took 15.6 ms; asked for a
 some PCs (issue #7) is not known; the log line will tell from the next
 reports.
 
+## Slow PCs: what the log now says (issue #7)
+
+Two testers get 20-50 frames per second with the graphics card mostly idle
+(steven44: i7-6700K, RTX 2060, processor about half used at full clock, GPU
+29%; his latest log has about 90 s near 31 fps and then a steady 60 for seven
+minutes). Sunspot77x has a laptop with a Radeon 780M built into the
+processor and an RTX 4060, and lower settings barely help.
+
+- `src/thread_stats.cpp`: every 30 s, `[threads] busiest over 30 s: ...`
+  lists the six busiest threads of the process with their processor time as a
+  percentage of one core (Windows: Toolhelp, `GetThreadTimes`,
+  `GetThreadDescription`; Linux: `/proc/self/task`). The game's own threads
+  are `XThreadNNNN` / `Main XThread`; the SDK's are named ("GPU Commands",
+  "Audio Worker", "XMA Decoder", ...). A thread near 100% is the bottleneck.
+  `rr6_thread_stats`, default on. On the Linux rig at the start: the game's
+  threads 54% and 37%, the audio worker 33%, llvmpipe the rest.
+- `src/gpu_choice.cpp`: the SDK's Direct3D 12 backend takes the first
+  adapter that can run Direct3D 12 (`d3d12_adapter = -1`), on hybrid laptops
+  usually the integrated one. In `OnPreSetup`, before the backend starts, the
+  game program lists the adapters in the same order, asks
+  `IDXGIFactory6::EnumAdapterByGpuPreference(HIGH_PERFORMANCE)` (fallback:
+  most video memory) and sets `d3d12_adapter` to it when that is not the
+  first. A hand-set value is kept unless it no longer names a usable adapter
+  (the SDK would otherwise fail to start). F4's "Save to config" may store the
+  chosen index; that is harmless for the same reason. `rr6_prefer_fast_gpu`.
+
+On Linux the audio worker's 33% comes from the SDK's POSIX `WaitMultiple`,
+which polls every millisecond instead of blocking; on Windows it uses
+`WaitForMultipleObjects` and does not. Worth fixing in the fork for the
+Steam Deck, not for the Windows reports.
+
 ## Sync to the display (issue #16)
 
 The Direct3D 12 presenter shows each frame at once, without waiting for the

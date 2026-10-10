@@ -30,6 +30,14 @@ repository are not flagged. Details and how to check the file:
   v0.10.0.101, which also lets the game's 60 Hz clock follow a 60 or 120 Hz
   screen so frames are not repeated or dropped; with an older runtime the
   box is greyed out.
+- Laptops with two graphics chips (one built into the processor, plus a
+  graphics card) now use the graphics card. The game took whichever one
+  Windows listed first, usually the slower built-in one. The log names the
+  adapters and which one is used. `rr6_prefer_fast_gpu = false` turns this
+  off; a `d3d12_adapter` set by hand is kept.
+- The log gets a line every 30 seconds with the busiest threads and how much
+  of a processor core each used, so a report from a slow PC shows what holds
+  the game back (issue #7).
 
 ## v0.1.5 and Linux test build 06 (2026-10-09)
 
