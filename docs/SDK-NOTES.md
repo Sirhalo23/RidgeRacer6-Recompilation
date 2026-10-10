@@ -248,7 +248,9 @@ FIFO presentation only; it has no equivalent of the display wait yet.
   `dummy` audio driver (`SDL_AUDIO_DRIVER=dummy`: "Audio target 'dummy' not
   available"), so the environment cannot work around it either. A Linux
   machine whose PulseAudio or PipeWire server is not running is enough to hit
-  it.
+  it. Fixed in our fork (PR #3 there, `silent-audio`): the SDL backend falls
+  back to a silent driver that takes frames at a real device's pace, and the
+  game runs without sound.
 - On Linux the runtime re-reads `/sys/devices/system/cpu/online` constantly
   (hundreds of thousands of opens in a few minutes) and logs "Too few
   processor cores" on every affinity call when the host has fewer than six.

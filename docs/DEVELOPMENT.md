@@ -614,14 +614,25 @@ What came of it:
   Checked: the main build without any of the options crashes the same way,
   at the same address, within 5 s when the audio server is down; with it up,
   all options off ran 12 minutes and cr/xer/ctr/reserved ran 5 minutes
-  without a fault. So the options are untested, not broken. The rig runs
-  both at the same 2.1-2.4 fps, which says nothing about a real PC; they need
-  a Windows build and a frame-time comparison before anyone ships them.
+  without a fault. Then, option by option with the audio server up:
+  `non_volatile_as_local` alone and cr/xer/ctr/reserved draw frames
+  normally (the rig runs them at the same 2.0-2.4 fps as the shipping build,
+  which says nothing about a real PC); `non_argument_as_local` hangs at
+  start, with the old code generator and the fixed one alike, and so does
+  any set that includes it. The main thread spins in `sub_82144DA0`,
+  waiting for another thread to set the word at 0x82B04F30 to 1; with r11
+  a local the loop body touches only locals, so the C++ compiler reads the
+  word once and never again (guest loads are plain loads). Making that
+  option safe needs a compiler barrier at loop back-edges in generated code.
+  Before any of these ship: a Windows build and a frame-time comparison.
   `skip_lr` and `skip_msr` stay off (the game relies on both).
-- **Funclets read r12 before writing it**: 20 `__finally` funclets do, and the
-  SDK's code generator hands only r14-r31 over at a funclet call. A fix for
-  the fork (`emit_function_call` in `context.cpp`: hand over r0, r11 and r12
-  too), not yet made.
+- **Funclets and the register-local options**: a `__finally` funclet runs on
+  its owner's registers and reads r12 (the owner's frame) first, but with
+  `non_argument_as_local` it got a zero local r12, and the owner handed only
+  r14-r31 over around the call. Fixed in the fork (PR #4 there,
+  `funclet-handover`): funclets keep their registers in `ctx` and owners
+  hand every local over. No change to the code generated with the options
+  off (all 91 files identical).
 - Left alone for now: the memory-layout change (`REX_PHYS_HOST_OFFSET`), the
   global lock's 121 call sites, the Linux 1 ms poll, the command thread's
   per-draw cost.
