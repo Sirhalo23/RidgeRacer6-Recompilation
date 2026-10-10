@@ -11,6 +11,8 @@
 //   [threads] busiest over 30 s: XThread0007 97%, GPU Commands 64%, ...
 //             (all threads 245% of one core; 8 logical processors)
 //
+// The same loop logs the [waits] line (wait_stats.cpp) straight after.
+//
 // Windows: Toolhelp lists the threads, GetThreadTimes gives their processor
 // time and GetThreadDescription their names. Linux: /proc/self/task.
 
@@ -31,6 +33,8 @@
 #include <rex/cvar.h>
 #include <rex/logging.h>
 
+#include "wait_stats.h"
+
 #if defined(_WIN32)
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -49,6 +53,8 @@
 REXCVAR_DEFINE_BOOL(rr6_thread_stats, true, "RR6",
                     "Every 30 seconds, log the busiest threads (processor time as a percentage "
                     "of one core), to show what holds the game back on a slow PC.");
+
+REXCVAR_DECLARE(bool, rr6_wait_stats);  // wait_stats.cpp
 
 namespace {
 
@@ -172,6 +178,10 @@ void Run() {
         return;
       }
     }
+    if (!REXCVAR_GET(rr6_thread_stats)) {
+      rr6::LogWaitStats();
+      continue;
+    }
     Samples current = TakeSamples();
     const auto now = Clock::now();
     const double seconds = std::chrono::duration<double>(now - previous_time).count();
@@ -197,6 +207,7 @@ void Run() {
                 seconds, list.empty() ? std::string("none") : list, total, processors);
     previous = std::move(current);
     previous_time = now;
+    rr6::LogWaitStats();
   }
 }
 
@@ -205,7 +216,9 @@ void Run() {
 namespace rr6 {
 
 void StartThreadStats() {
-  if (!REXCVAR_GET(rr6_thread_stats) || g_started.exchange(true)) return;
+  if (!(REXCVAR_GET(rr6_thread_stats) || REXCVAR_GET(rr6_wait_stats)) || g_started.exchange(true)) {
+    return;
+  }
   // Detached: the game may end the process without running destructors, and a
   // joinable std::thread left at exit would abort it.
   std::thread(Run).detach();

@@ -38,6 +38,14 @@ repository are not flagged. Details and how to check the file:
 - The log gets a line every 30 seconds with the busiest threads and how much
   of a processor core each used, so a report from a slow PC shows what holds
   the game back (issue #7).
+- The achievement pop-up no longer keeps the overlay running when nothing is
+  on screen. While it was there, every frame went to the screen the longer
+  way, through the overlay, and the overlay redrew itself non-stop: processor
+  time spent on nothing. Now it only joins in for the few seconds after an
+  unlock.
+- The log's 30-second report also says how long the game waited for the
+  graphics card and for reading its files (`[waits]`), to show whether either
+  slows a weak PC down (issue #7).
 
 ## v0.1.5 and Linux test build 06 (2026-10-09)
 

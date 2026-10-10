@@ -32,6 +32,7 @@ set(RR6RECOMP_SOURCES
     src/timer_resolution.cpp
     src/thread_stats.cpp
     src/gpu_choice.cpp
+    src/wait_stats.cpp
 )
 
 if(WIN32)
