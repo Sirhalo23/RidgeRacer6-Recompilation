@@ -10,8 +10,10 @@
 #include "achievements.h"
 #include "dlc_install.h"
 #include "frame_stats.h"
+#include "gpu_choice.h"
 #include "overlay_input.h"
 #include "quit_prompt.h"
+#include "thread_stats.h"
 #include "timer_resolution.h"
 
 class Rr6RecompApp : public rex::ReXApp {
@@ -38,6 +40,7 @@ class Rr6RecompApp : public rex::ReXApp {
     return rr6::CreateAchievementPopup(imgui_drawer());
   }
   void OnShutdown() override {
+    rr6::StopThreadStats();
     rr6::RemoveAchievements();
     rr6::RemoveQuitPrompt();
     rr6::RemoveOverlayInput();
@@ -62,12 +65,19 @@ class Rr6RecompApp : public rex::ReXApp {
     rr6::AddContentFromDlcFolder(runtime());
     rr6::WriteInstalledContentList(runtime());
     SetGuestFrameStats(rr6::FrameStatsProvider());  // the F3 window's frame rate
+    rr6::StartThreadStats();  // the busiest threads, in the log every 30 s
     rex::ReXApp::LaunchModule();
+  }
+
+  // Before the graphics backend starts: on a PC with two graphics adapters,
+  // use the high-performance one (Windows).
+  void OnPreSetup(rex::RuntimeConfig& config) override {
+    (void)config;
+    rr6::ChooseGraphicsAdapter();
   }
 
   // Override virtual hooks for customization:
   // void OnPostInitLogging() override {}
-  // void OnPreSetup(rex::RuntimeConfig& config) override {}
   // void OnLoadXexImage(std::string& xex_image) override {}
   // void OnPostLoadXexImage() override {}
   // void OnPostSetup() override {}

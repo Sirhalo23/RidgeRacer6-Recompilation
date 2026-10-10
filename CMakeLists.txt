@@ -30,6 +30,8 @@ set(RR6RECOMP_SOURCES
     src/frame_stats.cpp
     src/xma_loop_fix.cpp
     src/timer_resolution.cpp
+    src/thread_stats.cpp
+    src/gpu_choice.cpp
 )
 
 if(WIN32)
@@ -42,9 +44,10 @@ endif()
 rexglue_setup_target(rr6_recomp GPU_PLUGINS xenos)
 
 # The Windows multimedia library: the achievement sound (kept next to the
-# program as sounds/achievement.wav everywhere) and the 1 ms timer.
+# program as sounds/achievement.wav everywhere) and the 1 ms timer. DXGI and
+# Direct3D 12: choosing the graphics adapter (src/gpu_choice.cpp).
 if(WIN32)
-    target_link_libraries(rr6_recomp PRIVATE winmm)
+    target_link_libraries(rr6_recomp PRIVATE winmm dxgi d3d12)
 endif()
 add_custom_command(TARGET rr6_recomp POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:rr6_recomp>/sounds"
