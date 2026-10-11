@@ -22,6 +22,7 @@
 #include <system_error>
 
 #include <rex/cvar.h>
+#include <rex/filesystem.h>
 #include <rex/logging.h>
 
 #ifdef _WIN32
@@ -35,8 +36,6 @@
 
 #include <mmsystem.h>
 #else
-#include <unistd.h>
-
 #include <SDL3/SDL_audio.h>
 #include <SDL3/SDL_init.h>
 #include <SDL3/SDL_stdinc.h>
@@ -50,21 +49,7 @@ namespace rr6 {
 namespace {
 
 std::filesystem::path ProgramFolder() {
-#ifdef _WIN32
-  wchar_t buffer[32768];
-  const DWORD length = GetModuleFileNameW(nullptr, buffer, static_cast<DWORD>(std::size(buffer)));
-  if (length == 0 || length >= std::size(buffer)) {
-    return {};
-  }
-  return std::filesystem::path(std::wstring(buffer, length)).parent_path();
-#else
-  char buffer[4096];
-  const ssize_t length = readlink("/proc/self/exe", buffer, sizeof(buffer) - 1);
-  if (length <= 0) {
-    return {};
-  }
-  return std::filesystem::path(std::string(buffer, static_cast<size_t>(length))).parent_path();
-#endif
+  return rex::filesystem::GetExecutableFolder();
 }
 
 std::filesystem::path FindSound() {
@@ -76,6 +61,9 @@ std::filesystem::path FindSound() {
       folder.parent_path() / "achievement.wav",
       folder / "achievement.wav",
       folder / "sounds" / "achievement.wav",
+#ifdef __APPLE__
+      folder.parent_path() / "Resources" / "sounds" / "achievement.wav",
+#endif
   };
   std::error_code ec;
   for (const std::filesystem::path& candidate : candidates) {

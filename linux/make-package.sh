@@ -22,6 +22,12 @@ BUILD="${RR6_BUILD_DIR:-out/build/linux-release}"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
+# Optional local artwork, extracted from the player's disc during packaging.
+if [ -n "${RR6_ICON_XEX:-}" ]; then
+  "${PYTHON:-python3}" tools/disc_icon.py "$RR6_ICON_XEX" \
+    "${RR6_ICON_REXGLUE:-$SDK/bin/rexglue}" "$WORK/local-icons"
+fi
+
 for f in "$BUILD/rr6_recomp" "$SDK/lib/librexruntime.so" "$SDK/lib/librexgpu-xenos.so" launcher/rr6-extract \
          gamecontrollerdb.txt assets/achievement.wav linux/ridge-racer-6.sh linux/collect-report.sh linux/README.txt linux/README-steamdeck.txt; do
   [ -f "$f" ] || { echo "Missing: $f (run build-linux.sh first)"; exit 1; }
@@ -47,6 +53,12 @@ assemble() {  # assemble <folder name> <readme> <kind text> [deck]
   # The build number goes into the title; the line under it follows its length.
   sed "s/@BUILD@/$NUMBER/g" "$2" |
     awk 'NR == 1 { print; n = length($0); next } NR == 2 { line = ""; for (i = 0; i < n; i++) line = line "="; print line; next } { print }' > "$dir/README.txt"
+  if [ -n "${RR6_ICON_XEX:-}" ]; then
+    mkdir -p "$dir/icons"
+    install -m 644 "$WORK/local-icons/rr6.png" "$dir/icons/rr6.png"
+    install -m 755 linux/install-desktop.py "$dir/tools/install-desktop.py"
+    printf '\nLocal disc-derived icon: icons/rr6.png\nTo add a desktop-menu shortcut, run: python3 tools/install-desktop.py\nRe-run it after moving the extracted package. Steam custom icons can use the same PNG.\n' >> "$dir/README.txt"
+  fi
   install -m 755 "$BUILD/rr6_recomp" "$dir/bin/rr6_recomp"
   strip "$dir/bin/rr6_recomp"
   install -m 755 "$SDK/lib/librexruntime.so" "$SDK/lib/librexgpu-xenos.so" launcher/rr6-extract "$dir/bin/"

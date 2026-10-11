@@ -460,6 +460,23 @@ UnpackResult Unpack(Package& package, const std::vector<Item>& items, const fs::
   return {};
 }
 
+// libc++ may use a 128-bit filesystem clock representation, which has no
+// std::to_string overload. Preserve every digit of the existing cache stamp.
+std::string FileTimeStamp(fs::file_time_type time) {
+  auto ticks = time.time_since_epoch().count();
+  const bool negative = ticks < 0;
+  std::string result;
+  do {
+    auto digit = ticks % 10;
+    if (digit < 0) digit = -digit;
+    result.push_back(char('0' + digit));
+    ticks /= 10;
+  } while (ticks != 0);
+  if (negative) result.push_back('-');
+  std::reverse(result.begin(), result.end());
+  return result;
+}
+
 bool ReadWholeFile(const fs::path& path, std::string* out) {
   std::error_code ec;
   if (!fs::is_regular_file(path, ec)) {
@@ -936,7 +953,7 @@ void AddContentFromDlcFolder(rex::Runtime* runtime) {
       const auto time = fs::last_write_time(file, ec);
       if (ec) continue;
       const std::string stamp =
-          std::to_string(size) + "\t" + std::to_string(time.time_since_epoch().count());
+          std::to_string(size) + "\t" + FileTimeStamp(time);
       auto known = record.find(name);
       if (known != record.end() && known->second == stamp &&
           fs::is_directory(content_dir / rex::to_path(name), ec)) {

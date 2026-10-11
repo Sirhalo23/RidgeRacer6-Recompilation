@@ -97,6 +97,18 @@ foreach ($lic in @(Get-ChildItem -LiteralPath (Join-Path $packageSrc 'licenses')
 foreach ($b in @('rr6_recomp.exe', 'rexruntime.dll', 'rexgpu-xenos.dll')) {
     Copy-Item -LiteralPath (Join-Path $BuildDir $b) -Destination (Join-Path $stage 'bin')
 }
+# Personalize staged executables only; the source build and public default stay intact.
+if ($env:RR6_ICON_XEX) {
+    $iconTool = $env:RR6_ICON_REXGLUE
+    if (-not $iconTool) {
+        $sdkRoot = if ($env:REXSDK) { $env:REXSDK } else { Join-Path (Split-Path -Parent $ProjectDir) 'sdk/win-amd64' }
+        $iconTool = Join-Path $sdkRoot 'bin/rexglue.exe'
+    }
+    $python = if ($env:PYTHON) { $env:PYTHON } else { 'python' }
+    & $python (Join-Path $ProjectDir 'tools/disc_icon.py') $env:RR6_ICON_XEX $iconTool (Join-Path $stage 'icons') `
+        --embed (Join-Path $stage 'RR6 Launcher.exe') --embed (Join-Path $stage 'bin/rr6_recomp.exe')
+    if ($LASTEXITCODE -ne 0) { Fail 'Local disc-icon generation or embedding failed.' }
+}
 # The sound played with an achievement pop-up (an original chime; assets\achievement.wav).
 Copy-Item -LiteralPath (Join-Path (Join-Path $ProjectDir 'assets') 'achievement.wav') `
           -Destination (Join-Path (Join-Path (Join-Path $stage 'bin') 'sounds') 'achievement.wav')
@@ -104,8 +116,8 @@ Copy-Item -LiteralPath (Join-Path (Join-Path $ProjectDir 'assets') 'achievement.
 Copy-Item -LiteralPath (Join-Path (Join-Path $ProjectDir 'config') 'rr6_recomp.default.toml') `
           -Destination (Join-Path (Join-Path $stage 'bin') 'rr6_recomp.toml')
 
-$exeHash = (Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLower()
-$launcherHash = (Get-FileHash -LiteralPath (Join-Path $ProjectDir 'RR6 Launcher.exe') -Algorithm SHA256).Hash.ToLower()
+$exeHash = (Get-FileHash -LiteralPath (Join-Path $stage 'bin/rr6_recomp.exe') -Algorithm SHA256).Hash.ToLower()
+$launcherHash = (Get-FileHash -LiteralPath (Join-Path $stage 'RR6 Launcher.exe') -Algorithm SHA256).Hash.ToLower()
 $built = (Get-Item -LiteralPath $exe).LastWriteTime.ToString('yyyy-MM-dd HH:mm')
 # Which SDK the two runtime files come from: the version header of the SDK next
 # to the project (where build-windows.bat takes it from). Builds of our fork
