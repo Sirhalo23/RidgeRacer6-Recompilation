@@ -240,6 +240,17 @@ FIFO presentation only; it has no equivalent of the display wait yet.
 - With no audio output device the SDL audio backend has nothing to open and
   RR6 dereferences a null pointer shortly after audio initialisation. The
   launcher warns before starting; a null sink in the SDK would be cleaner.
+  In detail: `SDLAudioSystem::CreateDriver` fails, so
+  `XAudioRegisterRenderDriverClient` fails, which a console never does; the
+  game goes on and reads +16 of a null object in `sub_821FC9D0` (the global
+  at 0x82472454) on the main thread within seconds, and on Linux the fault
+  then repeats without end (below). The SDL inside the runtime has no
+  `dummy` audio driver (`SDL_AUDIO_DRIVER=dummy`: "Audio target 'dummy' not
+  available"), so the environment cannot work around it either. A Linux
+  machine whose PulseAudio or PipeWire server is not running is enough to hit
+  it. Fixed in our fork (PR #3 there, `silent-audio`): the SDL backend falls
+  back to a silent driver that takes frames at a real device's pace, and the
+  game runs without sound.
 - On Linux the runtime re-reads `/sys/devices/system/cpu/online` constantly
   (hundreds of thousands of opens in a few minutes) and logs "Too few
   processor cores" on every affinity call when the host has fewer than six.

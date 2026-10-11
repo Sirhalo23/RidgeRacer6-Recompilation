@@ -182,6 +182,17 @@ nothing, `CreateAchievementNotificationDialog` returns ours):
   plays it with `PlaySound`, Linux through the SDL inside the SDK's runtime
   library (on Windows the runtime does not export SDL). The Xbox 360's own
   unlock sound is not shipped; a player who wants it supplies the file.
+  The pop-up is on the SDK's overlay drawer (`ImGuiDrawer`) only while it has
+  something to show. Every `ImGuiDialog` adds itself to the drawer when
+  constructed, and while the drawer has any dialog the presenter paints every
+  frame on the UI thread and the drawer asks for the next paint after each
+  one; with none, frames go to the screen straight from the guest output
+  thread. The SDK keeps the notification dialog for the whole session, so
+  ours removes itself (`RemoveDialog`, allowed from inside `OnDraw`) once its
+  start-up jobs are done (unlock listener, launcher export, any
+  `rr6_preview_achievement`), and `Push` puts it back on the UI thread
+  (`RunOnUiThreadLater`). The log says `[achievements] pop-up idle` the first
+  time. Found by the performance review of 2026-10-10.
 - **List:** F7 (`rr6_achievements_key`), or Y from the quit question, which is
   the way to it with a controller. Scrolls with D-pad, stick, arrow and page
   keys, mouse wheel; B or Esc closes. Secret achievements (those the game's
@@ -425,6 +436,21 @@ processor and an RTX 4060, and lower settings barely help.
   (the SDK would otherwise fail to start). F4's "Save to config" may store the
   chosen index; that is harmless for the same reason. `rr6_prefer_fast_gpu`.
 
+- `src/wait_stats.cpp`: every 30 s, after the `[threads]` line, `[waits]`
+  gives two totals. The first is the game's "wait until the graphics chip is
+  idle", `sub_8225B828`: it writes a marker packet, kicks the ring
+  (`sub_8225B038`) and then spins on device+10492 without yielding
+  (`loc_8225B87C`). It is called from eight places; the log gives the count,
+  the total and longest time, and the two callers (return addresses) that
+  waited longest. The second is the game's ReadFile, `sub_822485F0`, the only
+  caller of `NtReadFile`: count, megabytes, time. The SDK's `NtReadFile`
+  always reads synchronously (`if (true || file->is_synchronous())`), so a
+  read holds the thread that asked even when the game asked for a background
+  read. Both hooks wrap the original whole. `rr6_wait_stats`, default on. If
+  the graphics wait turns out to matter, the fix is a yield in that loop
+  (a mid-asm hook, or this hook redoing the function with a yield); if the
+  reads do, it is in the SDK.
+
 On Linux the audio worker's 33% comes from the SDK's POSIX `WaitMultiple`,
 which polls every millisecond instead of blocking; on Windows it uses
 `WaitForMultipleObjects` and does not. Worth fixing in the fork for the
@@ -566,6 +592,50 @@ Not changed:
 - The rarer disc-name cases of RR6-05 beyond the ones above.
 
 None of it explains the stuttering report (issue #7).
+
+## Performance review (2026-10-10)
+
+Another model (Fable 5.1) reviewed the code for gains on low-end PCs without
+changing anything; its report is the "RR6 Performance Review" document.
+What came of it:
+
+- **Achievement pop-up kept the overlay running** (its top finding that was
+  not about the recompiler): fixed, see "Achievements".
+- **"Wait until the graphics chip is idle" spins** (`sub_8225B828`) and **file
+  reads are synchronous**: measured first, `[waits]` in the log (see "Slow
+  PCs"). On the rig in the title and menus: one graphics wait in 30 s, and
+  20-35 reads of 24-38 MB taking 35-55 ms. Race numbers come from testers.
+- **Recompiler register-to-local options** (`ctr_as_local`, `cr_as_local`,
+  `non_volatile_as_local`, ...): the review tried them on the rig and every
+  combination crashed within minutes in `sub_821FC9D0`, which it put down to a
+  race exposed by faster code. That crash is the known "no audio device"
+  one (SDK-NOTES section 14): PulseAudio was not running during those runs
+  (the gdb captures say `PulseAudio: Unable to connect: Connection refused`).
+  Checked: the main build without any of the options crashes the same way,
+  at the same address, within 5 s when the audio server is down; with it up,
+  all options off ran 12 minutes and cr/xer/ctr/reserved ran 5 minutes
+  without a fault. Then, option by option with the audio server up:
+  `non_volatile_as_local` alone and cr/xer/ctr/reserved draw frames
+  normally (the rig runs them at the same 2.0-2.4 fps as the shipping build,
+  which says nothing about a real PC); `non_argument_as_local` hangs at
+  start, with the old code generator and the fixed one alike, and so does
+  any set that includes it. The main thread spins in `sub_82144DA0`,
+  waiting for another thread to set the word at 0x82B04F30 to 1; with r11
+  a local the loop body touches only locals, so the C++ compiler reads the
+  word once and never again (guest loads are plain loads). Making that
+  option safe needs a compiler barrier at loop back-edges in generated code.
+  Before any of these ship: a Windows build and a frame-time comparison.
+  `skip_lr` and `skip_msr` stay off (the game relies on both).
+- **Funclets and the register-local options**: a `__finally` funclet runs on
+  its owner's registers and reads r12 (the owner's frame) first, but with
+  `non_argument_as_local` it got a zero local r12, and the owner handed only
+  r14-r31 over around the call. Fixed in the fork (PR #4 there,
+  `funclet-handover`): funclets keep their registers in `ctx` and owners
+  hand every local over. No change to the code generated with the options
+  off (all 91 files identical).
+- Left alone for now: the memory-layout change (`REX_PHYS_HOST_OFFSET`), the
+  global lock's 121 call sites, the Linux 1 ms poll, the command thread's
+  per-draw cost.
 
 ## Known issues
 

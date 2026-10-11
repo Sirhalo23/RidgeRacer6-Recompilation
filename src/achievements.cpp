@@ -139,6 +139,7 @@ ListDialog* g_list = nullptr;
 bool g_listening = false;        // the unlock callback has been registered
 double g_first_tick = 0;         // when the pop-up dialog drew for the first time
 bool g_previewed = false;
+bool g_logged_idle = false;      // the pop-up's first rest has been logged
 
 // Set from any thread: an unlock happened, the launcher's copy is out of date.
 std::atomic<bool> g_export_needed{true};
@@ -338,14 +339,39 @@ void Icon(ImDrawList* list, const Entry& entry, ImVec2 at, float size, float rou
 
 // --------------------------------------------------------------- the pop-up
 
+// While any overlay window is registered with the SDK's overlay drawer, the
+// SDK draws every frame on the UI thread, overlay on top, and asks for the next
+// paint as soon as one is done; with none, the game's frames go to the screen
+// straight from the thread that finishes them, which costs less. The pop-up is
+// only on screen for a few seconds after an unlock, so it takes itself off the
+// drawer while it has nothing to show and puts itself back when one comes in.
+// It stays on at start-up until its start-up jobs (Tick) are done.
+class Popup;
+Popup* g_popup = nullptr;  // UI thread
+
 class Popup : public rex::ui::AchievementNotificationDialog {
  public:
-  explicit Popup(rex::ui::ImGuiDrawer* drawer) : rex::ui::AchievementNotificationDialog(drawer) {}
+  explicit Popup(rex::ui::ImGuiDrawer* drawer)
+      : rex::ui::AchievementNotificationDialog(drawer), drawer_(drawer) {
+    g_popup = this;
+  }
+  ~Popup() override {
+    if (g_popup == this) {
+      g_popup = nullptr;
+    }
+  }
 
   // Any thread.
   void Push(const AchievementEvent& event) override {
-    std::lock_guard<std::mutex> lock(mutex_);
-    waiting_.push_back(event);
+    {
+      std::lock_guard<std::mutex> lock(mutex_);
+      waiting_.push_back(event);
+    }
+    RunOnUiThreadLater([] {
+      if (g_popup) {
+        g_popup->Attach();
+      }
+    });
   }
 
  protected:
@@ -360,6 +386,9 @@ class Popup : public rex::ui::AchievementNotificationDialog {
         showing_ = true;
         shown_at_ = now;
         PlayUnlockSound();
+      } else if (StartupDone()) {
+        Detach();
+        return;
       }
     }
     if (!showing_) {
@@ -423,8 +452,35 @@ class Popup : public rex::ui::AchievementNotificationDialog {
   }
 
  private:
-  // Things that need doing now and then, hung on this dialog because it is
-  // drawn every frame from start to finish.
+  // UI thread. Adding twice or removing twice does nothing; removing from
+  // inside OnDraw is allowed (the drawer finishes the frame first).
+  void Attach() {
+    if (!attached_) {
+      attached_ = true;
+      drawer_->AddDialog(this);
+    }
+  }
+  void Detach() {
+    if (attached_) {
+      attached_ = false;
+      drawer_->RemoveDialog(this);
+      if (!g_logged_idle) {
+        g_logged_idle = true;
+        REXLOG_INFO("[achievements] pop-up idle: off the overlay until the next unlock");
+      }
+    }
+  }
+
+  // The start-up jobs in Tick are done: the unlock listener is registered,
+  // the launcher's copy is written, and any preview has been queued.
+  bool StartupDone() const {
+    return g_listening && !g_export_needed.load() &&
+           (REXCVAR_GET(rr6_preview_achievement) <= 0 || g_previewed);
+  }
+
+  // Things that need doing now and then: every frame while the pop-up is on
+  // the drawer, which it is at start-up and after every unlock (an unlock is
+  // when the launcher's copy goes out of date).
   void Tick() {
     AchievementManager* manager = Manager();
     if (!manager) {
@@ -453,6 +509,8 @@ class Popup : public rex::ui::AchievementNotificationDialog {
     }
   }
 
+  rex::ui::ImGuiDrawer* drawer_;
+  bool attached_ = true;  // the base class adds the dialog to the drawer
   std::mutex mutex_;
   std::deque<AchievementEvent> waiting_;
   AchievementEvent current_;
