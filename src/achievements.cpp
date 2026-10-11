@@ -492,7 +492,16 @@ class Popup : public rex::ui::AchievementNotificationDialog {
     }
     if (!g_listening) {
       g_listening = true;
-      manager->RegisterUnlockCallback([](const AchievementEvent&) { g_export_needed = true; });
+      manager->RegisterUnlockCallback([](const AchievementEvent&) {
+        g_export_needed = true;
+        // Silent unlocks still need the launcher export refreshed, even when
+        // they do not dispatch a notification that would reattach the popup.
+        RunOnUiThreadLater([] {
+          if (g_popup) {
+            g_popup->Attach();
+          }
+        });
+      });
     }
     if (g_export_needed.exchange(false)) {
       ExportForLauncher();

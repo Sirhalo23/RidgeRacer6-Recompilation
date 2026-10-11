@@ -12,6 +12,7 @@
 
 #include <rex/filesystem.h>
 #include <rex/input/flags.h>
+#include <rex/logging.h>
 #endif
 
 #include "achievements.h"
@@ -42,6 +43,17 @@ class Rr6RecompApp : public rex::ReXApp {
   }
 
   void OnPostInitLogging() override {
+    // Configure MoltenVK before SetupPresentation loads the Vulkan driver.
+    // Its serial dispatch queue preserves submission order while keeping
+    // drawable acquisition off the UI thread and the SDK's queue mutex.
+    // An explicit environment value takes precedence (1 restores sync mode).
+    if (setenv("MVK_CONFIG_SYNCHRONOUS_QUEUE_SUBMITS", "0", 0) != 0) {
+      REXLOG_WARN("Unable to configure MoltenVK queue submission mode");
+    }
+    const char* queue_submits = std::getenv("MVK_CONFIG_SYNCHRONOUS_QUEUE_SUBMITS");
+    REXLOG_INFO("MoltenVK synchronous queue submits: {}",
+                queue_submits ? queue_submits : "driver default");
+
     // Finder and Terminal may launch from a different working directory.
     // Resolve the default SDL mapping database beside the executable, while
     // preserving an explicit custom mapping path.
@@ -90,7 +102,7 @@ class Rr6RecompApp : public rex::ReXApp {
     rr6::UseFineTimer();  // short waits really short on Windows (issue #7)
     rr6::AddContentFromDlcFolder(runtime());
     rr6::WriteInstalledContentList(runtime());
-    SetGuestFrameStats(rr6::FrameStatsProvider());  // the F3 window's frame rate
+    SetGuestFrameStats(rr6::FrameStatsProvider());  // Guest frame production, for F3.
     rr6::StartThreadStats();  // the busiest threads, in the log every 30 s
     rex::ReXApp::LaunchModule();
   }

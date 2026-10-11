@@ -184,6 +184,19 @@ To match the feedback-review build while that PR is pending:
     git -C ../rexglue-sdk checkout FETCH_HEAD
     git -C ../rexglue-sdk submodule update --init --recursive
 
+The performance build additionally uses
+[shared SDK PR #5](https://github.com/Sirhalo23/rexglue-sdk/pull/5),
+which adds presenter pipeline reuse, persistent driver caches, shutdown
+flushing and idle timer waits. To build the full performance changes:
+
+    git -C ../rexglue-sdk fetch origin pull/5/head
+    git -C ../rexglue-sdk checkout FETCH_HEAD
+    git -C ../rexglue-sdk submodule update --init --recursive
+
+Rebuild the runtime and GPU plugin together: this SDK change extends their
+shared graphics interface. Measured results and validation limits are in
+[the performance findings](tools/macos-performance-results.md).
+
 The SDK builds and stages its Vulkan loader and MoltenVK. From this checkout:
 
     ./build-macos.sh "/path/to/Ridge Racer 6 (USA).iso"
@@ -223,8 +236,26 @@ when upgrading an older build.
 `async_shader_compilation = true` remains enabled. New screens can briefly
 skip presentation while shader pipelines compile; keep the user-data cache
 between runs. Lower presentation resolution does not eliminate shader
-compilation drops, and a sustained frame-rate improvement has not yet been
-measured.
+compilation drops. The runtime also persists Vulkan driver pipeline data;
+on MoltenVK this reuses translated Metal shaders, while native Metal pipeline
+compilation may still occur. Quit normally to flush newly learned cache entries.
+For measured results and the required SDK changes, see
+[the performance findings](tools/macos-performance-results.md).
+
+On macOS, MoltenVK processes queue submissions on its serial dispatch queue
+by default. This keeps Metal drawable waits out of the shared submission lock.
+The startup log records `MoltenVK synchronous queue submits: 0`. To restore
+synchronous submissions for a comparison, run:
+
+    MVK_CONFIG_SYNCHRONOUS_QUEUE_SUBMITS=1 ./run-macos.sh
+
+An explicit environment value is preserved. This setting also applies to the
+packaged app and leaves the game's guest vblank timing unchanged.
+
+For repeatable CPU frame-time captures and separate cold/warm application
+cache comparisons, see [the macOS performance measurement guide](tools/performance.md).
+Its optional Release CSV measures guest-swap pacing and CPU swap work;
+Metal System Trace provides separate native GPU evidence.
 
 For a local app icon made from your own disc artwork, use the `default.xex`
 already extracted by `build-macos.sh`. The SDK extracts its original title

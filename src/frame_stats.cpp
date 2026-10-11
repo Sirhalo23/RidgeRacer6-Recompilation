@@ -5,6 +5,8 @@
 // empty box. The game ends every frame in its swap routine, sub_82259A28,
 // which hands the finished frame to the kernel (VdSwap), so frames are counted
 // there.
+// This measures guest frame production, not GPU completion or displayed FPS.
+// Async shader compilation may skip presenting a counted guest frame.
 //
 // The log gets one line every 30 seconds: the average frame rate and the
 // slowest frame in that time. Bug reports then say how fast the game ran on
