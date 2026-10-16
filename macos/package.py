@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Assemble only approved release files, audit linkage, sign and zip the app."""
 from pathlib import Path
+import hashlib
 import os
 import plistlib
 import re
@@ -21,6 +22,17 @@ def version_key(value):
 
 def run(*args):
     return subprocess.check_output([str(arg) for arg in args], text=True)
+
+
+def write_checksum(archive):
+    """Write a portable checksum beside the final, signed ZIP."""
+    digest = hashlib.sha256()
+    with archive.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    checksum = archive.with_suffix(archive.suffix + ".sha256")
+    checksum.write_text(f"{digest.hexdigest()}  {archive.name}\n", encoding="utf-8")
+    return checksum
 
 
 def reject_game_data(app):
@@ -181,7 +193,9 @@ def package(build, sdk, arch, output):
         run("codesign", "--verify", "--deep", "--strict", app)
         archive = output / f"RidgeRacer6-macOS-{arch}-test.zip"
         run("ditto", "-c", "-k", "--sequesterRsrc", "--keepParent", app, archive)
+        checksum = write_checksum(archive)
         print(f"Created {archive}\nMinimum macOS: {minimum}\nAd-hoc signed test build; not notarized.")
+        print(f"Checksum: {checksum}")
 
 
 if __name__ == "__main__":

@@ -291,6 +291,16 @@ includes third-party licenses, strips local/debug symbols and ad-hoc signs
 the app. It contains no ISO or extracted disc files. Python and Xcode are
 needed to make the package, but not on the machine running it.
 
+Packaging also writes a matching `.zip.sha256` file. Publish it beside the ZIP
+so users can check the download. From the folder containing both files:
+
+    shasum -a 256 -c RidgeRacer6-macOS-arm64-test.zip.sha256
+
+Use the `x86_64` filename for an Intel package. Checksums identify the archive;
+they do not replace code signing or notarization. An Apple Silicon hardware
+test of the existing native build is recorded in
+[the macOS test report](tools/macos-apple-silicon-test.md).
+
 Put the unpacked app beside the user's Ridge Racer 6 USA ISO and double-click
 it. A native macOS launcher opens with Display, Controls and Game Files tabs,
 Save Settings and Play. When exactly one ISO is beside the app, the first Play

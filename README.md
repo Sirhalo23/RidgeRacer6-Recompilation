@@ -33,6 +33,19 @@ Racer and its trademarks.
 
 `README.txt` in the zip has the details, including how to report a problem.
 
+### macOS (experimental)
+
+Native Apple Silicon and Intel build instructions and app packaging are in
+[BUILDING.md](BUILDING.md#macos). A packaged build contains
+one `Ridge Racer 6.app`, including its runtime dependencies. Use a package for
+your Mac's architecture; the Windows launcher does not run natively on macOS.
+The app needs your own USA ISO on first Play and keeps extracted files, settings
+and saves in `~/Library/Application Support/Ridge Racer 6/`.
+
+See the [Apple Silicon test report](tools/macos-apple-silicon-test.md) for a
+community test download, exact source revisions and the limits of testing.
+These test packages are ad-hoc signed, not notarized.
+
 ## If Windows warns about the download
 
 The programs in the zip are not code-signed, and every new release is a file
