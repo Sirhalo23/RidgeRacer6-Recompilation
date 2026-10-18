@@ -26,10 +26,8 @@ repository are not flagged. Details and how to check the file:
   the 60 Hz tick arrived in uneven steps. The log notes how long a short
   wait took before and after (issue #7).
 - Launcher 1.5: "Sync to my screen" on the Display page, for a picture
-  without tearing (issue #16). It needs the runtime from our SDK fork's
-  v0.10.0.101, which also lets the game's 60 Hz clock follow a 60 or 120 Hz
-  screen so frames are not repeated or dropped; with an older runtime the
-  box is greyed out.
+  without tearing (issue #16). It lets the game's 60 Hz clock follow a 60 or
+  120 Hz screen, so frames are not repeated or dropped.
 - Laptops with two graphics chips (one built into the processor, plus a
   graphics card) now use the graphics card. The game took whichever one
   Windows listed first, usually the slower built-in one. The log names the
@@ -46,6 +44,20 @@ repository are not flagged. Details and how to check the file:
 - The log's 30-second report also says how long the game waited for the
   graphics card and for reading its files (`[waits]`), to show whether either
   slows a weak PC down (issue #7).
+- Runtime from our SDK fork's v0.10.0.103 (was v0.10.0.100). Besides "Sync
+  to my screen" and the music fix above, it brings:
+  - A steadier 60 Hz clock when the game's clock comes from a timer
+    (screens other than 60/120 Hz, or with "Sync to my screen" off): each
+    tick now lands within a fraction of a millisecond of when it is due,
+    instead of up to a whole timer tick late. `vblank_precise_timer = false`
+    goes back to the old way.
+  - Two more lines in the log every 30 seconds: `[present]`, how many new
+    frames reached the screen, how evenly spaced they were and how many times
+    the window was redrawn in all; and `[vblank]`, how late the clock's ticks
+    were. Together with `[fps]` they show whether a picture that looks uneven
+    really is.
+  - No sound device (none plugged in, or the sound service not running): the
+    game now runs without sound instead of crashing a few seconds in.
 
 ## v0.1.5 and Linux test build 06 (2026-10-09)
 
