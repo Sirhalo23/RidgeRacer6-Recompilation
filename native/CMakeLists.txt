@@ -1,0 +1,11 @@
+if(RR6_NATIVE_TESTS)
+    enable_testing()
+    if(UNIX)
+        add_executable(rr6_native_gpu_progress_bridge_tests
+            tests/native_gpu_progress_bridge_tests.cpp ../src/native_gpu_progress_bridge.cpp)
+        target_include_directories(rr6_native_gpu_progress_bridge_tests PRIVATE ../src)
+        target_link_libraries(rr6_native_gpu_progress_bridge_tests PRIVATE recomp::native)
+        add_test(NAME rr6_native_gpu_progress_bridge COMMAND rr6_native_gpu_progress_bridge_tests)
+        set_tests_properties(rr6_native_gpu_progress_bridge PROPERTIES TIMEOUT 30)
+    endif()
+endif()

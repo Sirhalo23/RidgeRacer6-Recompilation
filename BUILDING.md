@@ -164,7 +164,10 @@ and density-control changes from
 texture-exponent fix needed for correct track textures. PR #487 was closed
 because upstream development already addresses its core build/presentation
 issues; the shared fork also retains the optional density control.
-This project uses the SDK through `REXSDK_DIR`; it does not patch the SDK.
+This project uses the SDK through `REXSDK_DIR`. The reviewed native wait
+adapters use build-local source copies; they do not edit the SDK checkout.
+See [native waits](docs/NATIVE-WAITS.md) for defaults, supported revisions and
+build/runtime fallback controls.
 Place a source checkout next to this repository:
 
     git clone --branch rr6 https://github.com/Sirhalo23/rexglue-sdk.git ../rexglue-sdk

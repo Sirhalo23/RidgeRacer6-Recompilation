@@ -1,0 +1,37 @@
+name: Native wait tests
+
+on:
+  push:
+    paths:
+      - 'CMakeLists.txt'
+      - 'libs/recomp_native/**'
+      - 'native/**'
+      - 'src/native_gpu_progress*'
+      - '.github/workflows/native-waits.yml'
+  pull_request:
+    paths:
+      - 'CMakeLists.txt'
+      - 'libs/recomp_native/**'
+      - 'native/**'
+      - 'src/native_gpu_progress*'
+      - '.github/workflows/native-waits.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-waits:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure without SDK or game files
+        run: cmake -S . -B out/build/native-waits -DRR6_NATIVE_ONLY=ON -DCMAKE_BUILD_TYPE=Debug
+      - name: Build
+        run: cmake --build out/build/native-waits --config Debug --parallel 2
+      - name: Test
+        run: ctest --test-dir out/build/native-waits --build-config Debug --output-on-failure

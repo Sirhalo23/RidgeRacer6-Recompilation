@@ -1,0 +1,90 @@
+{
+  "sub_8225B038": {
+    "file": "rr6_recomp_recomp.8.cpp",
+    "sha256": "fd7d814433a42414661715b464ed07b579d632ce091f20e6fe76db197ad26120"
+  },
+  "sub_8225B5E0": {
+    "file": "rr6_recomp_recomp.16.cpp",
+    "sha256": "0d83b6f38b7fa61d72157e80b98991a483a3d0cd0ad734715e24a8daf7709c6f"
+  },
+  "sub_82258980": {
+    "file": "rr6_recomp_recomp.29.cpp",
+    "sha256": "6044d5327baf8b1ab58b1ac7dc217d99d3126e79296814c55fe5757c8f5080b3"
+  },
+  "sub_82261260": {
+    "file": "rr6_recomp_recomp.15.cpp",
+    "sha256": "2b9b66e9f7aa47f8d35ec6510083d7b168fb6e20f2a5a316bf8eebbecb3c15f6"
+  },
+  "sub_8225AE18": {
+    "file": "rr6_recomp_recomp.28.cpp",
+    "sha256": "34a38be9e5523c9297614c7fd2a25fac8c246b8fcf2abeeb9ec8e7fdae37e1bd"
+  },
+  "sub_822598B8": {
+    "file": "rr6_recomp_recomp.10.cpp",
+    "sha256": "da13be1f16e510d89b2bddd8e6e45d1d4f77f4652f1814173f2aa02e63605eb2"
+  },
+  "sub_82259A28": {
+    "file": "rr6_recomp_recomp.38.cpp",
+    "sha256": "c84c27821948e5aa9c356a19776ae86c7adb40e360fadbb61db6588f8f4ccbd8"
+  },
+  "sub_8224EAE0": {
+    "file": "rr6_recomp_recomp.11.cpp",
+    "sha256": "6253e5fa2d4f33322c2fc7781c7e2ffdb648db73ef394bd556291b6def712b64"
+  },
+  "sub_82253648": {
+    "file": "rr6_recomp_recomp.23.cpp",
+    "sha256": "d11a80e694af5b123b9292de113cc5dd0fe9fd23da64f8b658c42a8ced9650d1"
+  },
+  "sub_8225D438": {
+    "file": "rr6_recomp_recomp.34.cpp",
+    "sha256": "4a8d87cc646d84b36465db331bbfaa3d447f073da2ec76dfccf6ea54584cf39c"
+  },
+  "sub_82257C78": {
+    "file": "rr6_recomp_recomp.35.cpp",
+    "sha256": "7c7879c39f6130ce9138d0f8c7cbd97e80b9b19f3cb715bf05d488e7f796fdb6"
+  },
+  "sub_82262C00": {
+    "file": "rr6_recomp_recomp.31.cpp",
+    "sha256": "72edd60eddf198e6e87dcf77e7edeab8088cb8ce4690fc1deb58cab8892d097e"
+  },
+  "sub_8218E8C0": {
+    "file": "rr6_recomp_recomp.26.cpp",
+    "sha256": "7b8e330b5447304692bd09116f5366901363e4b07b556b6e7fee08e6fa7e8eeb"
+  },
+  "sub_8225A9D8": {
+    "file": "rr6_recomp_recomp.26.cpp",
+    "sha256": "844620a7eec78b422f3778cc70d041e6b9a9dda7de0fe262522e110e8bde8953"
+  },
+  "sub_8225B8A0": {
+    "file": "rr6_recomp_recomp.2.cpp",
+    "sha256": "41a62301a0bc55e22fcfc8b73a18e77372aed66c7f97b99260246d14c4d80033"
+  },
+  "sub_8225CFD0": {
+    "file": "rr6_recomp_recomp.40.cpp",
+    "sha256": "467b6c1964f7a9eca6a2f636865589c51d28a0e4b17dcc33b5219b2ffb51872a"
+  },
+  "sub_82257FE0": {
+    "file": "rr6_recomp_recomp.0.cpp",
+    "sha256": "8dbdbe1ab5a071657bdb3b899ff8c91bce550a6bf9089c52f1fbe22e8783e387"
+  },
+  "sub_8225E3F8": {
+    "file": "rr6_recomp_recomp.0.cpp",
+    "sha256": "b536a757ddf94a920feb23749d1f50fe395b1c925bde60986669f8aaa60e867c"
+  },
+  "sub_82261400": {
+    "file": "rr6_recomp_recomp.4.cpp",
+    "sha256": "f8178bc8bfb93f8e6438508dfd2c843780598d5923a6ec9fe0f7b758ea34fa4e"
+  },
+  "sub_8225A748": {
+    "file": "rr6_recomp_recomp.5.cpp",
+    "sha256": "3dc3de0befbf0b2872fd39c178bf0daccbe60d2ad178d34e3fcfbb0953a1dbac"
+  },
+  "sub_82262C20": {
+    "file": "rr6_recomp_recomp.6.cpp",
+    "sha256": "a9dbe0adbc686c2e4188551d181537a5b6691cc4d5a186f49b289a770f42c7ef"
+  },
+  "sub_8225AFB0": {
+    "file": "rr6_recomp_recomp.25.cpp",
+    "sha256": "e8521e2f6ab7fcec51ddf7be3db0ce0c884646daee53d76a9dc5faf7127acc4a"
+  }
+}

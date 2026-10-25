@@ -8,7 +8,20 @@ project(rr6_recomp LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+option(RR6_NATIVE_ONLY "Build native wait tests without the SDK or game files" OFF)
+option(RR6_NATIVE_TESTS "Build native wait regression tests" ${RR6_NATIVE_ONLY})
+option(RECOMP_NATIVE_BUILD_TESTS "Build shared native wait tests" ${RR6_NATIVE_TESTS})
+if(RR6_NATIVE_ONLY OR RR6_NATIVE_TESTS OR RECOMP_NATIVE_BUILD_TESTS)
+    enable_testing()
+endif()
+if(RR6_NATIVE_ONLY)
+    add_subdirectory(libs/recomp_native)
+    add_subdirectory(native)
+    return()
+endif()
+
 include(generated/rexglue.cmake)
+include(native/waits.cmake)
 
 # Sources
 set(RR6RECOMP_SOURCES
@@ -53,6 +66,9 @@ endif()
 
 # The Xenos GPU plugin is loaded at runtime (--gpu_plugin=xenos); stage it next to the exe.
 rexglue_setup_target(rr6_recomp GPU_PLUGINS xenos)
+if(RR6_NATIVE_GPU_PROGRESS_WAIT)
+    include(native/gpu_progress.cmake)
+endif()
 
 # SDL resolves extra controller mappings at runtime. Keep the database beside
 # the game, including in native macOS builds.
