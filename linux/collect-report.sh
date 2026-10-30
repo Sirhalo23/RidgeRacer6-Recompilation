@@ -66,7 +66,11 @@ scrub() {
   echo "== files"
   echo "game files: $(find "$HERE/game" -maxdepth 1 -type f 2>/dev/null | wc -l) files, ready marker: $([ -f "$HERE/game/.rr6-ready" ] && echo yes || echo no)"
   df -h "$HERE" 2>/dev/null | tail -1 | awk '{print "free space here: " $4}'
-  echo "save data folder: $([ -d "$HOME/.local/share/rr6_recomp" ] && echo present || echo absent)"
+  if [ -d "$HERE/user-data" ] || [ -d "$HERE/bin/user-data" ]; then
+    echo "save data folder: user-data next to the game (portable)"
+  else
+    echo "save data folder: $([ -d "$HOME/.local/share/rr6_recomp" ] && echo present || echo absent)"
+  fi
 } 2>&1 | scrub /dev/stdin > "$R/system.txt"
 
 for f in "$HERE"/logs/last-exit.txt "$HERE"/logs/console.txt "$HERE"/logs/fault.txt "$HERE"/bin/rr6_recomp.toml; do
