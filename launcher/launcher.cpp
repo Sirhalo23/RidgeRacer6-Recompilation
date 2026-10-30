@@ -894,11 +894,22 @@ bool RunAndWait(std::wstring command, const std::wstring& cwd, DWORD* exit_code,
   return true;
 }
 
-// Where the game keeps saves and caches: Documents\rr6_recomp. Empty if it
-// cannot be worked out. A user_data_root line in the settings file does not
+// Where the game keeps saves and caches: a "user-data" folder next to the
+// game program or one level up (portable mode, issue #31; the game checks the
+// same two places, src/portable.cpp), otherwise Documents\rr6_recomp. Empty if
+// it cannot be worked out. A user_data_root line in the settings file does not
 // move it: the SDK picks this folder before it reads that file, so only a
 // --user_data_root on the command line would, and the launcher passes none.
 std::wstring UserDataRoot() {
+  if (!app.game_exe.empty()) {
+    const std::wstring exe_dir = app.game_exe.substr(0, app.game_exe.find_last_of(L'\\'));
+    const std::wstring parent = exe_dir.substr(0, exe_dir.find_last_of(L'\\'));
+    for (const std::wstring& dir : {exe_dir, parent}) {
+      if (DirExists(dir + L"\\user-data")) {
+        return dir + L"\\user-data";
+      }
+    }
+  }
   std::wstring root;
   PWSTR documents = nullptr;
   if (FAILED(SHGetKnownFolderPath(FOLDERID_Documents, 0, nullptr, &documents)) || !documents) {

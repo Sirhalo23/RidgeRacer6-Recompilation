@@ -148,6 +148,11 @@ WHERE THINGS ARE KEPT
 
 To remove everything, delete this folder and ~/.local/share/rr6_recomp.
 
+To keep the save data and graphics cache in this folder instead (portable),
+create a folder named user-data here, next to ridge-racer-6.sh. The game uses
+it from then on; copy the contents of ~/.local/share/rr6_recomp into it if you
+want your existing saves.
+
 
 KNOWN LIMITATIONS
 -----------------

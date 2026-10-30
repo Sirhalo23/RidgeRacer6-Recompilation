@@ -33,6 +33,7 @@ set(RR6RECOMP_SOURCES
     src/thread_stats.cpp
     src/gpu_choice.cpp
     src/wait_stats.cpp
+    src/portable.cpp
 )
 
 if(WIN32)

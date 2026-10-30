@@ -154,6 +154,17 @@ launcher's DLC page.
   content does not show up in the game, please report it.
 
 
+KEEPING EVERYTHING IN THE GAME FOLDER
+-------------------------------------
+Saves, achievement progress, installed DLC and the shader cache normally go
+to Documents\rr6_recomp. To keep them next to the game instead (on the same
+drive, or to carry the whole game folder around), create a folder named
+user-data next to RR6 Launcher.exe. From then on the game and the launcher
+use it. Your existing saves stay in Documents\rr6_recomp: to keep playing
+them, copy that folder's contents into user-data. Delete or rename user-data
+to go back.
+
+
 WHAT TO TEST
 ------------
 This build has only been played for short sessions on ONE PC (NVIDIA

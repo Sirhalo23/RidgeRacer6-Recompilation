@@ -176,7 +176,9 @@ driver. `README.txt` in each archive has the details.
   launcher's Language setting); the disc has all six.
 - **Controllers:** Xbox and PlayStation pads through SDL, with no setup.
 - **Keyboard:** works alongside a controller; every key can be changed.
-- **Saving** to `Documents\rr6_recomp`.
+- **Saving** to `Documents\rr6_recomp`, or next to the game: create a folder
+  named `user-data` beside the launcher and saves, achievements, DLC and caches
+  go there (copy your old saves across if you want them).
 - **Quitting** from the keyboard or the controller, with a question first.
 - **Achievements:** the game's 36, with a pop-up and a sound when you earn
   one, a list in the game (F7, or Y from the quit question) and in the

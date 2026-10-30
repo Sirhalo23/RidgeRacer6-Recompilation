@@ -20,6 +20,7 @@
 #include "frame_stats.h"
 #include "gpu_choice.h"
 #include "overlay_input.h"
+#include "portable.h"
 #include "quit_prompt.h"
 #include "thread_stats.h"
 #include "timer_resolution.h"
@@ -34,13 +35,18 @@ class Rr6RecompApp : public rex::ReXApp {
         PPCImageConfig));
   }
 
-#ifdef __APPLE__
   void OnConfigurePaths(rex::PathConfig& paths) override {
+    // A user-data folder beside the game: keep saves and DLC there (#31).
+    rr6::UsePortableFolder(paths);
+#ifdef __APPLE__
     // The release launcher keeps mutable settings outside the signed bundle.
     if (const char* root = std::getenv("RR6_MACOS_RELEASE_USER_ROOT")) {
       paths.config_path = std::filesystem::path(root) / "rr6_recomp.toml";
     }
+#endif
   }
+
+#ifdef __APPLE__
 
   void OnPostInitLogging() override {
     // Configure MoltenVK before SetupPresentation loads the Vulkan driver.
@@ -99,6 +105,7 @@ class Rr6RecompApp : public rex::ReXApp {
       });
       return;
     }
+    rr6::LogPortableFolder();
     rr6::UseFineTimer();  // short waits really short on Windows (issue #7)
     rr6::AddContentFromDlcFolder(runtime());
     rr6::WriteInstalledContentList(runtime());
@@ -119,5 +126,4 @@ class Rr6RecompApp : public rex::ReXApp {
   // void OnLoadXexImage(std::string& xex_image) override {}
   // void OnPostLoadXexImage() override {}
   // void OnPostSetup() override {}
-  // void OnConfigurePaths(rex::PathConfig& paths) override {}
 };
