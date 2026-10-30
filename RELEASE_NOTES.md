@@ -44,7 +44,7 @@ repository are not flagged. Details and how to check the file:
 - The log's 30-second report also says how long the game waited for the
   graphics card and for reading its files (`[waits]`), to show whether either
   slows a weak PC down (issue #7).
-- Runtime from our SDK fork's v0.10.0.103 (was v0.10.0.100). Besides "Sync
+- Runtime from our SDK fork's v0.10.0.104 (was v0.10.0.100). Besides "Sync
   to my screen" and the music fix above, it brings:
   - A steadier 60 Hz clock when the game's clock comes from a timer
     (screens other than 60/120 Hz, or with "Sync to my screen" off): each
@@ -58,6 +58,18 @@ repository are not flagged. Details and how to check the file:
     really is.
   - No sound device (none plugged in, or the sound service not running): the
     game now runs without sound instead of crashing a few seconds in.
+  - If the graphics driver resets or hangs, the log now says so before the
+    game ends; before, the game just closed (issue #37).
+  - If the game's program file cannot be loaded, the log says why, and a
+    drive that cannot map files into memory is read the ordinary way instead
+    (issue #33).
+- Portable mode: create a folder named `user-data` next to the launcher (on
+  Linux, next to `ridge-racer-6.sh`) and saves, achievement progress,
+  installed DLC and the shader cache are kept there instead of in your
+  Documents folder (issue #31). Copy your existing saves across if you want
+  them. Launcher 1.6 looks there too.
+- macOS: an experimental native build, built from source (BUILDING.md);
+  contributed by Alan Bradburne. No macOS package is offered yet.
 
 ## v0.1.5 and Linux test build 06 (2026-10-09)
 
